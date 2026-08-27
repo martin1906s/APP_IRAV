@@ -1,0 +1,38 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-3.5-flash-lite"
+      }
+    },
+    "production": {
+      "environment": "production",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-3.5-flash-lite"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

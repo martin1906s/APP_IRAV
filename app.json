@@ -1,0 +1,106 @@
+{
+  "expo": {
+    "name": "IRAV",
+    "slug": "IRAV",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.jpeg",
+    "scheme": "irav",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/logo.jpeg",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.irav.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "IRAV usa el micrófono para que puedas orar o hablar por audio."
+      }
+    },
+    "android": {
+      "package": "com.irav.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.jpeg",
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "irav"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/images/logo.jpeg"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font",
+      "expo-sqlite",
+      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/logo.jpeg",
+          "color": "#FFFFFF"
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "VerseWidget",
+              "label": "Versículo IRAV",
+              "description": "Frase y versículo según cómo te sientes hoy.",
+              "minWidth": "250dp",
+              "minHeight": "140dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal|vertical"
+            },
+            {
+              "name": "ChatWidget",
+              "label": "Chat con Jesús",
+              "description": "Abre el chat de IRAV para hablar con Jesús.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 86400000,
+              "resizeMode": "none"
+            }
+          ]
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8e578bb0-e8ab-465c-8985-1bedde490643"
+      }
+    },
+    "owner": "martin1906s"
+  }
+}
