@@ -82,7 +82,7 @@ export class GeminiAdapter implements AiChatPort {
 
   async reply(input: AiInput): Promise<string> {
     if (!env.geminiApiKey?.trim()) {
-      return 'Aún no puedo responder. Vuelve en un momento.';
+      return 'El chat aún no está configurado en esta versión. Instala un APK compilado con la clave de Gemini.';
     }
 
     const userParts =
