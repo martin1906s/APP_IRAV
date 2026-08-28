@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { Chapter } from '../../domain/entities/Verse';
 import { container } from '../../composition/container';
+import { saveLastReading } from '../../infrastructure/adapters/reading/LastReadingStore';
 import { ScreenShell } from '../templates/ScreenShell';
 import { AppHeader } from '../organisms/AppHeader';
 import { VerseList } from '../organisms/VerseList';
@@ -25,18 +26,35 @@ export function ChapterScreen() {
     const result = await container.getChapter.execute(versionId, bookId, chapter);
     setData(result);
     setLoading(false);
-  }, [versionId, bookId, chapter]);
+    await saveLastReading({
+      versionId,
+      versionName,
+      bookId,
+      bookName,
+      chapters,
+      chapter,
+      verse,
+    });
+  }, [versionId, versionName, bookId, bookName, chapters, chapter, verse]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const goBack = () => {
+    if (nav.canGoBack()) {
+      nav.goBack();
+      return;
+    }
+    nav.navigate('Books', { versionId, versionName });
+  };
 
   return (
     <ScreenShell>
       <AppHeader
         title={`${bookName} ${chapter}`}
         subtitle={versionName}
-        onBack={() => nav.goBack()}
+        onBack={goBack}
       />
       <ScrollView
         horizontal

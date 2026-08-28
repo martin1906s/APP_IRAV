@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ChatMessage } from '../../domain/entities/ChatMessage';
 import { container } from '../../composition/container';
 import { ScreenShell } from '../templates/ScreenShell';
@@ -12,6 +21,7 @@ import { colors, spacing } from '../theme';
 /** Pantalla: chat con Jesús */
 export function ChatScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -58,6 +68,16 @@ export function ChatScreen() {
       });
     }, []),
   );
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const sub = Keyboard.addListener(showEvent, () => {
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+    });
+    return () => sub.remove();
+  }, []);
+
+  const tabBarOffset = 56 + Math.max(insets.bottom, 6);
 
   const push = (msg: ChatMessage) => {
     setMessages((prev) => [...prev, msg]);
@@ -143,19 +163,27 @@ export function ChatScreen() {
 
   return (
     <ScreenShell padded={false}>
-      <View style={styles.pad}>
-        <AppHeader
-          showLogo
-          title="Jesús"
-          subtitle={userName ? `Contigo, ${userName}` : 'Guía de IRAV'}
-        />
-      </View>
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={(m) => m.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? tabBarOffset : 0}
+      >
+        <View style={styles.pad}>
+          <AppHeader
+            showLogo
+            title="Jesús"
+            subtitle={userName ? `Contigo, ${userName}` : 'Guía de IRAV'}
+          />
+        </View>
+        <FlatList
+          ref={listRef}
+          style={styles.flex}
+          data={messages}
+          keyExtractor={(m) => m.id}
+          contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          renderItem={({ item }) => (
           <ChatBubble
             message={item}
             speaking={speakingId === item.id}
@@ -190,19 +218,21 @@ export function ChatScreen() {
           ) : null
         }
       />
-      <ChatComposer
-        value={text}
-        onChangeText={setText}
-        onSend={sendText}
-        onMic={toggleMic}
-        recording={recording}
-        busy={busy}
-      />
+        <ChatComposer
+          value={text}
+          onChangeText={setText}
+          onSend={sendText}
+          onMic={toggleMic}
+          recording={recording}
+          busy={busy}
+        />
+      </KeyboardAvoidingView>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   pad: { paddingHorizontal: spacing.md, paddingTop: spacing.xs },
   list: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm, flexGrow: 1 },
 });

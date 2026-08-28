@@ -9,20 +9,31 @@ import {
 import { VerseWidget } from './VerseWidget';
 import { ChatWidget } from './ChatWidget';
 
+async function renderVerseWidget(props: WidgetTaskHandlerProps) {
+  const hasMood = await hasMoodTodayCached();
+  const inspiration = hasMood ? await readCachedInspiration() : null;
+  props.renderWidget(
+    <VerseWidget
+      inspiration={inspiration}
+      needsMood={!hasMood || !inspiration}
+      width={props.widgetInfo.width}
+      height={props.widgetInfo.height}
+    />,
+  );
+}
+
 async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   const name = props.widgetInfo.widgetName;
 
   if (name === 'ChatWidget') {
-    props.renderWidget(<ChatWidget />);
+    props.renderWidget(
+      <ChatWidget width={props.widgetInfo.width} height={props.widgetInfo.height} />,
+    );
     return;
   }
 
   if (name === 'VerseWidget') {
-    const hasMood = await hasMoodTodayCached();
-    const inspiration = hasMood ? await readCachedInspiration() : null;
-    props.renderWidget(
-      <VerseWidget inspiration={inspiration} needsMood={!hasMood || !inspiration} />,
-    );
+    await renderVerseWidget(props);
   }
 }
 

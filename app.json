@@ -49,12 +49,14 @@
           ]
         }
       ],
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/images/logo.jpeg"
     },
     "plugins": [
+      "./plugins/withAndroidReleaseSigning.js",
       "expo-asset",
       "expo-font",
       "expo-sqlite",
@@ -74,8 +76,10 @@
               "name": "VerseWidget",
               "label": "Versículo IRAV",
               "description": "Frase y versículo según cómo te sientes hoy.",
-              "minWidth": "250dp",
-              "minHeight": "140dp",
+              "minWidth": "110dp",
+              "minHeight": "80dp",
+              "maxResizeWidth": "530dp",
+              "maxResizeHeight": "400dp",
               "targetCellWidth": 4,
               "targetCellHeight": 2,
               "updatePeriodMillis": 1800000,
@@ -85,12 +89,14 @@
               "name": "ChatWidget",
               "label": "Chat con Jesús",
               "description": "Abre el chat de IRAV para hablar con Jesús.",
-              "minWidth": "110dp",
-              "minHeight": "110dp",
+              "minWidth": "80dp",
+              "minHeight": "80dp",
+              "maxResizeWidth": "400dp",
+              "maxResizeHeight": "400dp",
               "targetCellWidth": 2,
               "targetCellHeight": 2,
               "updatePeriodMillis": 86400000,
-              "resizeMode": "none"
+              "resizeMode": "horizontal|vertical"
             }
           ]
         }

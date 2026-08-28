@@ -13,11 +13,11 @@ const V = (partial: Omit<InspirationVerse, 'versionId' | 'versionName' | 'chapte
   versionName: 'Nueva Versión Internacional',
 });
 
-/** Frases + versículos por ánimo */
+/** Frases cortas + versículos por ánimo */
 export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
   Paz: [
     {
-      phrase: 'Hoy puedes respirar: Dios sostiene lo que tú no alcanzas a cargar.',
+      phrase: 'Dios sostiene lo que no alcanzas a cargar.',
       verse: V({
         text: 'Tú guardarás en completa paz a aquel cuyo pensamiento en ti persevera; porque en ti ha confiado.',
         reference: 'Isaías 26:3',
@@ -29,7 +29,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
       }),
     },
     {
-      phrase: 'La paz no es ausencia de ruido; es saber quién camina contigo.',
+      phrase: 'La paz es saber quién camina contigo.',
       verse: V({
         text: 'La paz os dejo, mi paz os doy; yo no os la doy como el mundo la da. No se turbe vuestro corazón, ni tenga miedo.',
         reference: 'Juan 14:27',
@@ -43,7 +43,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
   ],
   Alegría: [
     {
-      phrase: 'Tu sonrisa también puede ser una forma de adorar.',
+      phrase: 'Tu sonrisa también adora.',
       verse: V({
         text: 'Este es el día que hizo Jehová; nos gozaremos y alegraremos en él.',
         reference: 'Salmos 118:24',
@@ -55,7 +55,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
       }),
     },
     {
-      phrase: 'Celebra lo bueno: Dios también se alegra contigo.',
+      phrase: 'Dios se alegra contigo.',
       verse: V({
         text: 'El gozo de Jehová es vuestra fuerza.',
         reference: 'Nehemías 8:10',
@@ -69,7 +69,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
   ],
   Ansiedad: [
     {
-      phrase: 'No tienes que resolverlo todo hoy. Entrégalo y da el siguiente paso.',
+      phrase: 'No resuelvas todo hoy. Da un paso.',
       verse: V({
         text: 'Por nada estéis afanosos, sino sean conocidas vuestras peticiones delante de Dios en toda oración y ruego, con acción de gracias.',
         reference: 'Filipenses 4:6',
@@ -81,7 +81,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
       }),
     },
     {
-      phrase: 'Cuando la mente corre, Dios invita a descansar en Él.',
+      phrase: 'Cuando la mente corre, descansa en Él.',
       verse: V({
         text: 'Echando toda vuestra ansiedad sobre él, porque él tiene cuidado de vosotros.',
         reference: '1 Pedro 5:7',
@@ -95,7 +95,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
   ],
   Tristeza: [
     {
-      phrase: 'Llorar también es valiente. Dios está cerca de los que sufren.',
+      phrase: 'Llorar también es valiente.',
       verse: V({
         text: 'Jehová está cerca de los quebrantados de corazón; y salva a los contritos de espíritu.',
         reference: 'Salmos 34:18',
@@ -107,7 +107,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
       }),
     },
     {
-      phrase: 'Esta noche no dura para siempre: hay consuelo para tu alma.',
+      phrase: 'Esta noche no dura para siempre.',
       verse: V({
         text: 'Bienaventurados los que lloran, porque ellos recibirán consolación.',
         reference: 'Mateo 5:4',
@@ -121,7 +121,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
   ],
   Fuerza: [
     {
-      phrase: 'Tu fuerza no nace de fingir: nace de confiar.',
+      phrase: 'Tu fuerza nace de confiar.',
       verse: V({
         text: 'Todo lo puedo en Cristo que me fortalece.',
         reference: 'Filipenses 4:13',
@@ -133,7 +133,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
       }),
     },
     {
-      phrase: 'Hoy puedes avanzar, aunque sea un paso pequeño.',
+      phrase: 'Avanza, aunque sea un paso.',
       verse: V({
         text: 'Esforzaos y cobrad ánimo; no temáis, ni tengáis miedo… porque Jehová tu Dios es el que va contigo.',
         reference: 'Deuteronomio 31:6',
@@ -147,7 +147,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
   ],
   Gratitud: [
     {
-      phrase: 'Mirar lo que sí tienes cambia el peso de lo que falta.',
+      phrase: 'Mirar lo que tienes cambia el peso.',
       verse: V({
         text: 'Dad gracias en todo, porque esta es la voluntad de Dios para con vosotros en Cristo Jesús.',
         reference: '1 Tesalonicenses 5:18',
@@ -159,7 +159,7 @@ export const INSPIRATION_BY_MOOD: Record<MoodType, PoolItem[]> = {
       }),
     },
     {
-      phrase: 'La gratitud abre la puerta a más paz.',
+      phrase: 'La gratitud abre la puerta a la paz.',
       verse: V({
         text: 'Bendice, alma mía, a Jehová, y no olvides ninguno de sus beneficios.',
         reference: 'Salmos 103:2',

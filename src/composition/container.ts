@@ -14,6 +14,7 @@ import {
   GetTodayInspiration,
   SaveMoodAndInspire,
 } from '../application/use-cases/MoodInspirationUseCases';
+import { GetRecentMoods } from '../application/use-cases/GetRecentMoods';
 
 /** Composition root */
 const bible = new BibleApiAdapter();
@@ -36,4 +37,5 @@ export const container = {
   saveProfile: new SaveUserProfile(profiles),
   saveMoodAndInspire: new SaveMoodAndInspire(moods, profiles, bible),
   getTodayInspiration: new GetTodayInspiration(moods),
+  getRecentMoods: new GetRecentMoods(moods),
 };
