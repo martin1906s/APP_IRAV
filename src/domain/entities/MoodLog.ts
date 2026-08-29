@@ -7,6 +7,7 @@ export type MoodType =
   | 'Gratitud';
 
 export type MoodLog = {
+  id?: string;
   date: string; // YYYY-MM-DD
   mood: MoodType;
   createdAt: number;

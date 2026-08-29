@@ -1,7 +1,9 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { VersionsScreen } from '../screens/VersionsScreen';
-import { BooksScreen } from '../screens/BooksScreen';
-import { ChapterScreen } from '../screens/ChapterScreen';
+import {
+  GuardedBooksScreen,
+  GuardedChapterScreen,
+  GuardedVersionsScreen,
+} from '../auth/guardedScreens';
 import { colors } from '../theme';
 
 export type BibleStackParamList = {
@@ -24,15 +26,15 @@ const Stack = createNativeStackNavigator<BibleStackParamList>();
 export function BibleStack() {
   return (
     <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.bg },
-        animation: 'fade_from_bottom',
-      }}
-    >
-      <Stack.Screen name="Versions" component={VersionsScreen} />
-      <Stack.Screen name="Books" component={BooksScreen} />
-      <Stack.Screen name="Chapter" component={ChapterScreen} />
-    </Stack.Navigator>
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+          animation: 'fade_from_bottom',
+        }}
+      >
+        <Stack.Screen name="Versions" component={GuardedVersionsScreen} />
+        <Stack.Screen name="Books" component={GuardedBooksScreen} />
+        <Stack.Screen name="Chapter" component={GuardedChapterScreen} />
+      </Stack.Navigator>
   );
 }

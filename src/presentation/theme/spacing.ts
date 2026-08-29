@@ -8,8 +8,8 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 10,
-  md: 16,
-  lg: 22,
+  sm: 4,
+  md: 8,
+  lg: 12,
   pill: 999,
 };

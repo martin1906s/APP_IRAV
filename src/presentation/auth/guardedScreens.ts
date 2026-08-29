@@ -1,0 +1,37 @@
+import { withScreenAuth } from './withScreenAuth';
+import { HomeScreen } from '../screens/HomeScreen';
+import { ChatScreen } from '../screens/ChatScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
+import { VersionsScreen } from '../screens/VersionsScreen';
+import { BooksScreen } from '../screens/BooksScreen';
+import { ChapterScreen } from '../screens/ChapterScreen';
+import { DailyMoodScreen } from '../screens/DailyMoodScreen';
+import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
+import { AdminUsersScreen } from '../screens/admin/AdminUsersScreen';
+import { AdminUserDetailScreen } from '../screens/admin/AdminUserDetailScreen';
+import { AdminUserFormScreen } from '../screens/admin/AdminUserFormScreen';
+import { AdminSystemSettingsScreen } from '../screens/admin/AdminSystemSettingsScreen';
+import { AdminAnnouncementsScreen } from '../screens/admin/AdminAnnouncementsScreen';
+import { AdminAnnouncementFormScreen } from '../screens/admin/AdminAnnouncementFormScreen';
+import { AnnouncementsScreen } from '../screens/AnnouncementsScreen';
+import { AnnouncementDetailScreen } from '../screens/AnnouncementDetailScreen';
+import { ChallengeScreen } from '../screens/ChallengeScreen';
+
+export const GuardedHomeScreen = withScreenAuth(HomeScreen, 'USER');
+export const GuardedAnnouncementsScreen = withScreenAuth(AnnouncementsScreen, 'USER');
+export const GuardedAnnouncementDetailScreen = withScreenAuth(AnnouncementDetailScreen, 'USER');
+export const GuardedChallengeScreen = withScreenAuth(ChallengeScreen, 'USER');
+export const GuardedChatScreen = withScreenAuth(ChatScreen, 'USER');
+export const GuardedUserSettingsScreen = withScreenAuth(SettingsScreen, 'USER');
+export const GuardedVersionsScreen = withScreenAuth(VersionsScreen, 'USER');
+export const GuardedBooksScreen = withScreenAuth(BooksScreen, 'USER');
+export const GuardedChapterScreen = withScreenAuth(ChapterScreen, 'USER');
+export const GuardedDailyMoodScreen = withScreenAuth(DailyMoodScreen, 'USER', 'mount');
+
+export const GuardedAdminDashboardScreen = withScreenAuth(AdminDashboardScreen, 'ADMIN');
+export const GuardedAdminUsersScreen = withScreenAuth(AdminUsersScreen, 'ADMIN');
+export const GuardedAdminUserDetailScreen = withScreenAuth(AdminUserDetailScreen, 'ADMIN');
+export const GuardedAdminUserFormScreen = withScreenAuth(AdminUserFormScreen, 'ADMIN');
+export const GuardedAdminSettingsScreen = withScreenAuth(AdminSystemSettingsScreen, 'ADMIN');
+export const GuardedAdminAnnouncementsScreen = withScreenAuth(AdminAnnouncementsScreen, 'ADMIN');
+export const GuardedAdminAnnouncementFormScreen = withScreenAuth(AdminAnnouncementFormScreen, 'ADMIN');

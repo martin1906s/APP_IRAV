@@ -1,24 +1,37 @@
+import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { colors, spacing } from '../theme';
 import { AppText } from '../atoms/AppText';
-import { LogoMark } from '../molecules/LogoMark';
 import { IconButton } from '../atoms/IconButton';
+import { LogoMark } from '../molecules/LogoMark';
 
 type Props = {
   title?: string;
   subtitle?: string;
-  showLogo?: boolean;
   onBack?: () => void;
+  right?: ReactNode;
+  showLogo?: boolean;
 };
 
-/** Organismo: cabecera */
-export function AppHeader({ title = 'IRAV', subtitle, showLogo, onBack }: Props) {
+export function AppHeader({
+  title = 'IRAV',
+  subtitle,
+  onBack,
+  right,
+  showLogo = true,
+}: Props) {
   return (
     <View style={styles.wrap}>
       {onBack ? (
-        <IconButton name="arrow-back" onPress={onBack} size={20} bg={colors.accentSoft} color={colors.text} />
+        <IconButton
+          name="arrow-back"
+          onPress={onBack}
+          size={20}
+          bg={colors.surface}
+          color={colors.text}
+        />
       ) : showLogo ? (
-        <LogoMark size={44} />
+        <LogoMark size={36} />
       ) : null}
       <View style={styles.text}>
         <AppText variant="title">{title}</AppText>
@@ -28,6 +41,7 @@ export function AppHeader({ title = 'IRAV', subtitle, showLogo, onBack }: Props)
           </AppText>
         ) : null}
       </View>
+      {right ? <View style={styles.right}>{right}</View> : null}
     </View>
   );
 }
@@ -35,15 +49,19 @@ export function AppHeader({ title = 'IRAV', subtitle, showLogo, onBack }: Props)
 const styles = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   text: { flex: 1 },
   sub: {
-    marginTop: 2,
+    marginTop: 4,
     fontSize: 14,
     textTransform: 'none',
     letterSpacing: 0,
   },
+  right: { marginTop: 2 },
 });

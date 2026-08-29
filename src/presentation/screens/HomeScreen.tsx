@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ScreenShell } from '../templates/ScreenShell';
-import { LogoMark } from '../molecules/LogoMark';
 import { AppText } from '../atoms/AppText';
 import { Spacer } from '../atoms/Spacer';
 import { container } from '../../composition/container';
@@ -15,6 +14,7 @@ import {
   type LastReading,
 } from '../../infrastructure/adapters/reading/LastReadingStore';
 import { colors, fonts, radius, spacing } from '../theme';
+import { LogoMark } from '../molecules/LogoMark';
 import { BIBLE_VERSIONS } from '../../shared/constants/bibleVersions';
 
 const QUICK_VERSES = [
@@ -33,7 +33,15 @@ const MOOD_EMOJI: Record<string, string> = {
   Gratitud: '🙏',
 };
 
-/** Inicio: marca, palabra del día, continuar lectura y accesos rápidos */
+function todayLabel(): string {
+  return new Date().toLocaleDateString('es-EC', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+}
+
+/** Inicio */
 export function HomeScreen() {
   const nav = useNavigation<any>();
   const [name, setName] = useState('');
@@ -43,7 +51,6 @@ export function HomeScreen() {
   const [inspiration, setInspiration] = useState<DailyInspiration | null>(null);
   const [recentMoods, setRecentMoods] = useState<MoodLog[]>([]);
   const [lastReading, setLastReading] = useState<LastReading | null>(null);
-  const rise = useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async () => {
     const profile = await container.getProfile.execute();
@@ -69,15 +76,6 @@ export function HomeScreen() {
       load();
     }, [load]),
   );
-
-  useEffect(() => {
-    Animated.spring(rise, {
-      toValue: 1,
-      friction: 8,
-      tension: 60,
-      useNativeDriver: true,
-    }).start();
-  }, [rise]);
 
   const openBibleChapter = (params: {
     versionId: string;
@@ -145,149 +143,139 @@ export function HomeScreen() {
   };
 
   const streak = recentMoods.length;
+  const firstName = name.trim().split(/\s+/)[0] || '';
 
   return (
     <ScreenShell>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <Animated.View
-          style={{
-            opacity: rise,
-            transform: [
-              {
-                translateY: rise.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [18, 0],
-                }),
-              },
-            ],
-          }}
-        >
-          <View style={styles.brand}>
-            <LogoMark size={88} />
-            <AppText variant="hero" style={styles.brandName}>
-              IRAV
-            </AppText>
-            <AppText style={styles.greet}>
-              {name ? `Hola, ${name}` : 'Bienvenido'}
+        <View style={styles.top}>
+          <LogoMark size={40} />
+          <View style={styles.topText}>
+            <AppText variant="hero">{firstName ? `Hola, ${firstName}` : 'Inicio'}</AppText>
+            <AppText muted style={styles.date}>{todayLabel()}</AppText>
+          </View>
+        </View>
+
+        <Spacer size="md" />
+        <Pressable style={styles.announceCard} onPress={() => nav.navigate('Announcements')}>
+          <View style={styles.announceIcon}>
+            <Ionicons name="megaphone-outline" size={20} color={colors.accent} />
+          </View>
+          <View style={styles.announceBody}>
+            <AppText variant="subtitle">Anuncios IRAV</AppText>
+            <AppText muted style={styles.announceHint}>
+              Comunicados y avisos de la comunidad
             </AppText>
           </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
 
-          {recentMoods.length > 0 ? (
-            <View style={styles.moodCard}>
-              <View style={styles.moodHeader}>
-                <AppText variant="caption" style={styles.moodLabel}>
-                  Tu semana
-                </AppText>
-                <AppText style={styles.streak}>
-                  {streak} {streak === 1 ? 'día' : 'días'}
-                </AppText>
-              </View>
-              <View style={styles.moodRow}>
-                {recentMoods
-                  .slice()
-                  .reverse()
-                  .map((log) => (
-                    <View key={log.date} style={styles.moodDot}>
-                      <AppText style={styles.moodEmoji}>{MOOD_EMOJI[log.mood] ?? '·'}</AppText>
-                      <AppText style={styles.moodDay}>
-                        {log.date.slice(8, 10)}/{log.date.slice(5, 7)}
-                      </AppText>
-                    </View>
-                  ))}
-              </View>
+        {recentMoods.length > 0 ? (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <AppText variant="subtitle">Tu semana</AppText>
+              <AppText muted style={styles.meta}>
+                {streak} {streak === 1 ? 'día' : 'días'}
+              </AppText>
             </View>
-          ) : null}
-
-          {inspiration ? (
-            <Pressable onPress={openVerse} style={styles.word}>
-              <AppText variant="caption" style={styles.wordLabel}>
-                Palabra de hoy · {inspiration.mood}
-              </AppText>
-              <AppText variant="title" style={styles.phrase}>
-                {inspiration.phrase}
-              </AppText>
-              <AppText variant="verse" style={styles.verse} numberOfLines={3}>
-                “{inspiration.verse.text}”
-              </AppText>
-              <View style={styles.refRow}>
-                <AppText style={styles.ref}>{inspiration.verse.reference}</AppText>
-                <Ionicons name="arrow-forward" size={18} color={colors.accent} />
-              </View>
-            </Pressable>
-          ) : null}
-
-          {lastReading ? (
-            <Pressable onPress={openLastReading} style={styles.continue}>
-              <View style={styles.continueIcon}>
-                <Ionicons name="bookmark" size={20} color={colors.accent} />
-              </View>
-              <View style={styles.continueBody}>
-                <AppText variant="caption" style={styles.continueLabel}>
-                  Continuar leyendo
-                </AppText>
-                <AppText variant="subtitle">
-                  {lastReading.bookName} {lastReading.chapter}
-                </AppText>
-                <AppText muted style={styles.continueHint}>
-                  {lastReading.versionName}
-                </AppText>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </Pressable>
-          ) : null}
-
-          <View style={styles.section}>
-            <AppText variant="caption" style={styles.sectionLabel}>
-              Versículos populares
-            </AppText>
-            <View style={styles.quickGrid}>
-              {QUICK_VERSES.map((item) => (
-                <Pressable
-                  key={item.label}
-                  style={styles.quickChip}
-                  onPress={() => openQuickVerse(item)}
-                >
-                  <AppText style={styles.quickText}>{item.label}</AppText>
-                </Pressable>
-              ))}
+            <View style={styles.moodRow}>
+              {recentMoods
+                .slice()
+                .reverse()
+                .map((log) => (
+                  <View key={log.date} style={styles.moodDot}>
+                    <AppText style={styles.moodEmoji}>{MOOD_EMOJI[log.mood] ?? '·'}</AppText>
+                    <AppText muted style={styles.moodDay}>
+                      {log.date.slice(8, 10)}/{log.date.slice(5, 7)}
+                    </AppText>
+                  </View>
+                ))}
             </View>
           </View>
+        ) : null}
 
-          <Spacer size="md" />
+        {inspiration ? (
+          <Pressable onPress={openVerse} style={styles.card}>
+            <AppText muted style={styles.label}>
+              Palabra de hoy · {inspiration.mood}
+            </AppText>
+            <AppText variant="subtitle" style={styles.phrase}>
+              {inspiration.phrase}
+            </AppText>
+            <AppText variant="verse" style={styles.verse} numberOfLines={3}>
+              “{inspiration.verse.text}”
+            </AppText>
+            <View style={styles.refRow}>
+              <AppText style={styles.ref}>{inspiration.verse.reference}</AppText>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </View>
+          </Pressable>
+        ) : null}
 
-          <Pressable style={styles.path} onPress={() => nav.navigate('ChatTab')}>
-            <View style={styles.pathLine} />
-            <View style={styles.pathBody}>
+        {lastReading ? (
+          <Pressable onPress={openLastReading} style={styles.row}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
+            </View>
+            <View style={styles.rowBody}>
+              <AppText variant="subtitle">Continuar leyendo</AppText>
+              <AppText muted style={styles.rowHint}>
+                {lastReading.bookName} {lastReading.chapter} · {lastReading.versionName}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
+
+        <View style={styles.section}>
+          <AppText muted style={styles.sectionTitle}>
+            Accesos rápidos
+          </AppText>
+          <View style={styles.quickGrid}>
+            {QUICK_VERSES.map((item) => (
+              <Pressable key={item.label} style={styles.quickChip} onPress={() => openQuickVerse(item)}>
+                <AppText style={styles.quickText}>{item.label}</AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <Spacer size="md" />
+
+        <View style={styles.menu}>
+          <Pressable style={styles.row} onPress={() => nav.navigate('ChatTab')}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.text} />
+            </View>
+            <View style={styles.rowBody}>
               <AppText variant="subtitle">Hablar con Jesús</AppText>
-              <AppText muted style={styles.pathHint}>
-                Escribe o graba. Él te escucha.
-              </AppText>
+              <AppText muted style={styles.rowHint}>Chat espiritual</AppText>
             </View>
-            <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.accent} />
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
 
-          <Pressable style={styles.path} onPress={openBible}>
-            <View style={[styles.pathLine, { backgroundColor: colors.accentWarm }]} />
-            <View style={styles.pathBody}>
-              <AppText variant="subtitle">Abrir la Biblia</AppText>
-              <AppText muted style={styles.pathHint}>
-                Lee con calma, a tu ritmo.
-              </AppText>
+          <Pressable style={styles.row} onPress={openBible}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="book-outline" size={20} color={colors.text} />
             </View>
-            <Ionicons name="book-outline" size={22} color={colors.accentWarm} />
+            <View style={styles.rowBody}>
+              <AppText variant="subtitle">Biblia</AppText>
+              <AppText muted style={styles.rowHint}>Todas las versiones</AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
 
-          <Pressable style={styles.path} onPress={() => nav.navigate('SettingsTab')}>
-            <View style={[styles.pathLine, { backgroundColor: colors.border }]} />
-            <View style={styles.pathBody}>
-              <AppText variant="subtitle">Tu perfil</AppText>
-              <AppText muted style={styles.pathHint}>
-                Versión bíblica, notificaciones y más.
-              </AppText>
+          <Pressable style={styles.row} onPress={() => nav.navigate('SettingsTab')}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="person-outline" size={20} color={colors.text} />
             </View>
-            <Ionicons name="person-outline" size={22} color={colors.textMuted} />
+            <View style={styles.rowBody}>
+              <AppText variant="subtitle">Perfil y ajustes</AppText>
+              <AppText muted style={styles.rowHint}>Cuenta y preferencias</AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
-        </Animated.View>
+        </View>
       </ScrollView>
     </ScreenShell>
   );
@@ -295,74 +283,89 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
-  brand: {
+  top: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.md,
+    gap: spacing.md,
     marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  brandName: {
-    marginTop: spacing.md,
-    color: colors.accent,
-  },
-  greet: {
-    marginTop: spacing.sm,
-    fontFamily: fonts.sans,
-    fontSize: 16,
-    color: colors.textMuted,
-    textTransform: 'none',
+  topText: { flex: 1, gap: 4 },
+  date: {
+    fontSize: 14,
+    textTransform: 'capitalize',
     letterSpacing: 0,
   },
-  moodCard: {
+  announceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     backgroundColor: colors.bgCard,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  moodHeader: {
+  announceIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  announceBody: { flex: 1, gap: 2 },
+  announceHint: {
+    fontSize: 13,
+    textTransform: 'none',
+    letterSpacing: 0,
+  },
+  card: {
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
-  moodLabel: { color: colors.accentWarm },
-  streak: {
-    fontFamily: fonts.sansMedium,
+  meta: {
     fontSize: 13,
-    color: colors.textMuted,
     textTransform: 'none',
     letterSpacing: 0,
   },
-  moodRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between' },
   moodDot: { alignItems: 'center', gap: 4 },
   moodEmoji: { fontSize: 18 },
   moodDay: {
-    fontFamily: fonts.sans,
-    fontSize: 10,
-    color: colors.textMuted,
+    fontSize: 11,
     textTransform: 'none',
     letterSpacing: 0,
   },
-  word: {
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-    marginBottom: spacing.md,
+  label: {
+    fontSize: 13,
+    marginBottom: spacing.sm,
+    textTransform: 'none',
+    letterSpacing: 0,
   },
-  wordLabel: { color: colors.accentWarm },
-  phrase: { color: colors.text },
+  phrase: { marginBottom: spacing.sm },
   verse: { color: colors.text },
   refRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   ref: {
     fontFamily: fonts.sansMedium,
@@ -371,48 +374,20 @@ const styles = StyleSheet.create({
     textTransform: 'none',
     letterSpacing: 0,
   },
-  continue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  continueIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  continueBody: { flex: 1, gap: 2 },
-  continueLabel: { color: colors.accentWarm },
-  continueHint: {
+  section: { marginBottom: spacing.sm },
+  sectionTitle: {
     fontSize: 13,
+    marginBottom: spacing.sm,
     textTransform: 'none',
     letterSpacing: 0,
   },
-  section: { marginBottom: spacing.sm },
-  sectionLabel: {
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   quickChip: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     backgroundColor: colors.bgCard,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   quickText: {
@@ -422,22 +397,32 @@ const styles = StyleSheet.create({
     textTransform: 'none',
     letterSpacing: 0,
   },
-  path: {
+  menu: {
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    backgroundColor: colors.bgCard,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.sm,
+    padding: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  pathLine: {
-    width: 4,
-    alignSelf: 'stretch',
-    borderRadius: 2,
-    backgroundColor: colors.accent,
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  pathBody: { flex: 1, gap: 2 },
-  pathHint: {
-    fontSize: 14,
+  rowBody: { flex: 1, gap: 2 },
+  rowHint: {
+    fontSize: 13,
     textTransform: 'none',
     letterSpacing: 0,
   },

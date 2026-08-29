@@ -32,25 +32,27 @@ export function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
-    container.getProfile.execute().then((p) => {
+    container.getProfile.execute().then(async (p) => {
       if (p) {
         container.ai.setProfile(p);
         setUserName(p.name);
         setVoiceEnabled(p.voiceEnabled);
+      }
+      try {
+        const history = await container.chat.listMessages();
+        if (history.length > 0) {
+          setMessages(history);
+          return;
+        }
+      } catch {
+        /* sin historial remoto */
+      }
+      if (p) {
         setMessages([
           {
             id: 'welcome',
             role: 'assistant',
             text: `Hola ${p.name}, soy Jesús. Puedes escribirme o grabar tu voz. Estoy aquí para darte paz y claridad.`,
-            createdAt: Date.now(),
-          },
-        ]);
-      } else {
-        setMessages([
-          {
-            id: 'welcome',
-            role: 'assistant',
-            text: 'Hola, soy Jesús. Escribe o graba: estoy contigo.',
             createdAt: Date.now(),
           },
         ]);
@@ -79,8 +81,9 @@ export function ChatScreen() {
 
   const tabBarOffset = 56 + Math.max(insets.bottom, 6);
 
-  const push = (msg: ChatMessage) => {
+  const push = (msg: ChatMessage, persist = true) => {
     setMessages((prev) => [...prev, msg]);
+    if (persist) void container.chat.saveMessage(msg).catch(() => undefined);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
   };
 
@@ -103,7 +106,7 @@ export function ChatScreen() {
     setBusy(true);
     try {
       const reply = await container.sendChat.execute({ type: 'text', text: value });
-      push(reply);
+      push(reply, false);
       if (voiceEnabled) void speakMessage(reply);
     } catch {
       push({
@@ -147,7 +150,7 @@ export function ChatScreen() {
       });
 
       const reply = await container.sendChat.execute({ type: 'text', text: transcript });
-      push(reply);
+      push(reply, false);
       if (voiceEnabled) void speakMessage(reply);
     } catch {
       push({
@@ -170,9 +173,8 @@ export function ChatScreen() {
       >
         <View style={styles.pad}>
           <AppHeader
-            showLogo
             title="Jesús"
-            subtitle={userName ? `Contigo, ${userName}` : 'Guía de IRAV'}
+            subtitle={userName ? `Contigo, ${userName}` : 'Asistente espiritual'}
           />
         </View>
         <FlatList

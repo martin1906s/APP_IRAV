@@ -2,16 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { Chapter } from '../../domain/entities/Verse';
+import type { VerseHighlight } from '../../domain/entities/VerseHighlight';
 import { container } from '../../composition/container';
 import { saveLastReading } from '../../infrastructure/adapters/reading/LastReadingStore';
 import { ScreenShell } from '../templates/ScreenShell';
 import { AppHeader } from '../organisms/AppHeader';
 import { VerseList } from '../organisms/VerseList';
 import { Chip } from '../atoms/Chip';
+import { AppText } from '../atoms/AppText';
 import { Spacer } from '../atoms/Spacer';
-import { colors, spacing } from '../theme';
+import { colors, fonts, spacing } from '../theme';
 
-/** Pantalla: lectura de capítulo */
 export function ChapterScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
@@ -19,12 +20,23 @@ export function ChapterScreen() {
 
   const [chapter, setChapter] = useState(route.params.chapter ?? 1);
   const [data, setData] = useState<Chapter | null>(null);
+  const [highlights, setHighlights] = useState<VerseHighlight[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const loadHighlights = useCallback(async () => {
+    try {
+      const rows = await container.highlights.listForChapter(versionId, bookId, chapter);
+      setHighlights(rows);
+    } catch {
+      setHighlights([]);
+    }
+  }, [versionId, bookId, chapter]);
 
   const load = useCallback(async () => {
     setLoading(true);
     const result = await container.getChapter.execute(versionId, bookId, chapter);
     setData(result);
+    await loadHighlights();
     setLoading(false);
     await saveLastReading({
       versionId,
@@ -35,11 +47,37 @@ export function ChapterScreen() {
       chapter,
       verse,
     });
-  }, [versionId, versionName, bookId, bookName, chapters, chapter, verse]);
+  }, [versionId, versionName, bookId, bookName, chapters, chapter, verse, loadHighlights]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleHighlight = async (v: { number: number; text: string }, color: string) => {
+    const saved = await container.highlights.upsert({
+      versionId,
+      bookId,
+      bookName,
+      chapter,
+      verse: v.number,
+      verseText: v.text,
+      color,
+    });
+    setHighlights((prev) => {
+      const rest = prev.filter((h) => h.verse !== v.number);
+      return [...rest, saved].sort((a, b) => a.verse - b.verse);
+    });
+  };
+
+  const handleRemove = async (v: { number: number }) => {
+    const existing = highlights.find((h) => h.verse === v.number);
+    if (existing) {
+      await container.highlights.remove(existing.id);
+    } else {
+      await container.highlights.removeByVerse(versionId, bookId, chapter, v.number);
+    }
+    setHighlights((prev) => prev.filter((h) => h.verse !== v.number));
+  };
 
   const goBack = () => {
     if (nav.canGoBack()) {
@@ -51,11 +89,8 @@ export function ChapterScreen() {
 
   return (
     <ScreenShell>
-      <AppHeader
-        title={`${bookName} ${chapter}`}
-        subtitle={versionName}
-        onBack={goBack}
-      />
+      <AppHeader title={`${bookName} ${chapter}`} subtitle={versionName} onBack={goBack} />
+      <AppText style={styles.hint}>Mantén presionado un versículo para subrayar</AppText>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -68,7 +103,7 @@ export function ChapterScreen() {
             label={String(n)}
             selected={n === chapter}
             onPress={() => setChapter(n)}
-            tone="sky"
+            tone="gold"
             style={styles.chip}
           />
         ))}
@@ -82,6 +117,9 @@ export function ChapterScreen() {
         <VerseList
           verses={data?.verses ?? []}
           focusVerse={chapter === route.params.chapter ? verse : undefined}
+          highlights={highlights}
+          onHighlight={handleHighlight}
+          onRemoveHighlight={handleRemove}
         />
       )}
     </ScreenShell>
@@ -89,18 +127,20 @@ export function ChapterScreen() {
 }
 
 const styles = StyleSheet.create({
-  chips: {
-    flexGrow: 0,
-    flexShrink: 0,
-    overflow: 'visible',
+  hint: {
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
+    textTransform: 'none',
+    letterSpacing: 0,
   },
+  chips: { flexGrow: 0, flexShrink: 0 },
   chipsContent: {
     alignItems: 'center',
     paddingVertical: spacing.sm,
     paddingRight: spacing.md,
   },
-  chip: {
-    marginBottom: 0,
-  },
+  chip: { marginBottom: 0 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { ScreenShell } from '../templates/ScreenShell';
 import { AppHeader } from '../organisms/AppHeader';
 import { CountrySelect } from '../molecules/CountrySelect';
+import { DatePickerField } from '../molecules/DatePickerField';
+import { FormField } from '../molecules/FormField';
 import { AppText } from '../atoms/AppText';
-import { AppInput } from '../atoms/AppInput';
 import { AppButton } from '../atoms/AppButton';
 import { Chip } from '../atoms/Chip';
 import { Spacer } from '../atoms/Spacer';
@@ -14,6 +15,10 @@ import { container } from '../../composition/container';
 import type { UserProfile } from '../../domain/entities/UserProfile';
 import { DEFAULT_PROFILE } from '../../domain/entities/UserProfile';
 import { syncReminderFromSettings } from '../../infrastructure/adapters/inspiration/DailyNotification';
+import { syncChallengeReminders } from '../../infrastructure/adapters/challenges/ChallengeNotifications';
+import { registerPushToken } from '../../infrastructure/adapters/push/registerPushToken';
+import { isValidBirthDate } from '../../shared/utils/dateFormat';
+import { refreshAuth } from '../../infrastructure/api/authRefresh';
 import { colors, fonts, spacing } from '../theme';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -22,7 +27,8 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 export function SettingsScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [name, setName] = useState('');
-  const [age, setAge] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('Ecuador');
   const [versionId, setVersionId] = useState(DEFAULT_PROFILE.preferredVersionId);
   const [notifications, setNotifications] = useState(true);
@@ -36,7 +42,8 @@ export function SettingsScreen() {
       if (!p) return;
       setProfile(p);
       setName(p.name);
-      setAge(String(p.age));
+      setBirthDate(p.birthDate);
+      setPhone(p.phone);
       setCountry(p.country);
       setVersionId(p.preferredVersionId);
       setNotifications(p.notificationsEnabled);
@@ -45,29 +52,61 @@ export function SettingsScreen() {
     });
   }, []);
 
-  const ageNum = useMemo(() => Number(age), [age]);
-  const valid = name.trim().length >= 2 && ageNum >= 10 && ageNum <= 99;
+  const valid = useMemo(
+    () => name.trim().length >= 2 && isValidBirthDate(birthDate) && phone.trim().length >= 8,
+    [name, birthDate, phone],
+  );
 
   const save = async () => {
-    if (!valid || busy) return;
+    if (!valid || busy || !profile) return;
     setBusy(true);
     const next: UserProfile = {
+      ...profile,
       name: name.trim(),
-      age: ageNum,
+      birthDate,
+      phone: phone.trim(),
       country,
       preferredVersionId: versionId,
       notificationsEnabled: notifications,
       voiceEnabled: voice,
       reminderHour: hour,
-      reminderMinute: profile?.reminderMinute ?? 0,
+      reminderMinute: profile.reminderMinute ?? 0,
     };
     await container.saveProfile.execute(next);
     container.ai.setProfile(next);
-    await syncReminderFromSettings(next);
+      if (profile.notificationsEnabled) {
+        void registerPushToken();
+      }
+      await syncReminderFromSettings(next);
+      try {
+        const challenge = await container.challenges.getStatus();
+        await syncChallengeReminders({
+          enrolled: challenge.enrolled,
+          hasChallengeToday: challenge.hasChallengeToday,
+          todayCompleted: challenge.todayCompleted,
+          notificationsEnabled: next.notificationsEnabled,
+        });
+      } catch {
+        /* reto opcional */
+      }
     setProfile(next);
     setSaved(true);
     setBusy(false);
     setTimeout(() => setSaved(false), 1800);
+  };
+
+  const logout = () => {
+    Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Salir',
+        style: 'destructive',
+        onPress: async () => {
+          await container.auth.logout();
+          refreshAuth();
+        },
+      },
+    ]);
   };
 
   return (
@@ -75,12 +114,13 @@ export function SettingsScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <AppHeader title="Ajustes" subtitle="Tu perfil y preferencias" />
 
-        <AppText variant="caption">Nombre</AppText>
-        <AppInput value={name} onChangeText={setName} autoCapitalize="words" />
+        <FormField label="Nombre" kind="name" value={name} onChangeText={setName} />
         <Spacer size="sm" />
 
-        <AppText variant="caption">Edad</AppText>
-        <AppInput value={age} onChangeText={setAge} keyboardType="number-pad" maxLength={2} />
+        <DatePickerField label="Fecha de nacimiento" value={birthDate} onChange={setBirthDate} />
+        <Spacer size="sm" />
+
+        <FormField label="Teléfono" kind="phone" value={phone} onChangeText={setPhone} />
         <Spacer size="sm" />
 
         <AppText variant="caption">País</AppText>
@@ -111,8 +151,8 @@ export function SettingsScreen() {
           <Switch
             value={notifications}
             onValueChange={setNotifications}
-            trackColor={{ true: colors.accent, false: colors.border }}
-            thumbColor={notifications ? colors.onAccent : colors.accent}
+            trackColor={{ true: colors.accentGlow, false: colors.border }}
+            thumbColor={notifications ? colors.accent : colors.textMuted}
           />
         </View>
 
@@ -126,8 +166,8 @@ export function SettingsScreen() {
           <Switch
             value={voice}
             onValueChange={setVoice}
-            trackColor={{ true: colors.accent, false: colors.border }}
-            thumbColor={voice ? colors.onAccent : colors.accent}
+            trackColor={{ true: colors.accentGlow, false: colors.border }}
+            thumbColor={voice ? colors.accent : colors.textMuted}
           />
         </View>
 
@@ -150,6 +190,8 @@ export function SettingsScreen() {
 
         <Spacer size="lg" />
         <AppButton label={saved ? 'Guardado' : 'Guardar'} onPress={save} disabled={!valid || busy} />
+        <Spacer size="md" />
+        <AppButton label="Cerrar sesión" onPress={logout} variant="ghost" />
         <Spacer size="xxl" />
       </ScrollView>
     </ScreenShell>

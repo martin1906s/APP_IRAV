@@ -16,7 +16,8 @@ jobs:
 
     env:
       EXPO_PUBLIC_GEMINI_API_KEY: ${{ secrets.EXPO_PUBLIC_GEMINI_API_KEY }}
-      EXPO_PUBLIC_GEMINI_MODEL: gemini-3.5-flash-lite
+      EXPO_PUBLIC_GEMINI_MODEL: ${{ vars.EXPO_PUBLIC_GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://back-irav.onrender.com' }}
 
     steps:
       - name: Checkout
@@ -34,17 +35,24 @@ jobs:
       - name: Configure environment variables
         run: |
           if [ -z "$EXPO_PUBLIC_GEMINI_API_KEY" ]; then
-            echo "Falta el secreto EXPO_PUBLIC_GEMINI_API_KEY en GitHub."
-            echo "Ve a Settings > Secrets and variables > Actions y agregalo."
+            echo "Falta el secreto EXPO_PUBLIC_GEMINI_API_KEY en GitHub Actions."
             exit 1
           fi
+
+          API_URL="${EXPO_PUBLIC_API_URL:-https://back-irav.onrender.com}"
+          API_URL="${API_URL%/}"
+
+          echo "API de producción: $API_URL"
+          curl -fsS "$API_URL/health" || echo "Aviso: /health no respondió (Render puede estar dormido; el build continúa)."
+
           cat > .env << EOF
           EXPO_PUBLIC_GEMINI_API_KEY=${EXPO_PUBLIC_GEMINI_API_KEY}
           EXPO_PUBLIC_GEMINI_MODEL=${EXPO_PUBLIC_GEMINI_MODEL}
+          EXPO_PUBLIC_API_URL=${API_URL}
           EOF
-        env:
-          EXPO_PUBLIC_GEMINI_API_KEY: ${{ secrets.EXPO_PUBLIC_GEMINI_API_KEY }}
-          EXPO_PUBLIC_GEMINI_MODEL: gemini-3.5-flash-lite
+
+          echo "Contenido de .env (sin claves):"
+          grep -v GEMINI_API_KEY .env | sed 's/=.*/=***/'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -61,7 +69,8 @@ jobs:
       - name: Configure release signing
         run: |
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "Falta el secreto ANDROID_KEYSTORE_BASE64 en GitHub."
+            echo "Falta el secreto ANDROID_KEYSTORE_BASE64 en GitHub Actions."
+            echo "Genera uno con: .\\scripts\\generate-android-keystore.ps1"
             exit 1
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
@@ -76,11 +85,15 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || vars.ANDROID_KEY_ALIAS || 'irav-release' }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Build production APK
         working-directory: android
+        env:
+          EXPO_PUBLIC_GEMINI_API_KEY: ${{ secrets.EXPO_PUBLIC_GEMINI_API_KEY }}
+          EXPO_PUBLIC_GEMINI_MODEL: ${{ vars.EXPO_PUBLIC_GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://back-irav.onrender.com' }}
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
@@ -104,8 +117,8 @@ jobs:
           body: |
             APK de **producción** firmado, generado automáticamente desde la rama principal.
 
+            **API:** ${{ vars.EXPO_PUBLIC_API_URL || 'https://back-irav.onrender.com' }}
             **Commit:** ${{ github.sha }}
-            **Fecha:** ${{ github.event.head_commit.timestamp }}
 
             Descarga el APK desde los assets de esta release e instálalo en tu dispositivo.
           files: dist/IRAV-latest.apk

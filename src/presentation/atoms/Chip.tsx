@@ -1,4 +1,4 @@
-import { Platform, Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { colors, radius, spacing } from '../theme';
 import { AppText } from './AppText';
 
@@ -6,23 +6,45 @@ type Props = {
   label: string;
   selected?: boolean;
   onPress: () => void;
-  tone?: 'pink' | 'mint' | 'sky';
+  tone?: 'pink' | 'mint' | 'sky' | 'gold';
   style?: ViewStyle;
+  disabled?: boolean;
 };
 
-/** Átomo: chip seleccionable */
-export function Chip({ label, selected, onPress, tone = 'mint', style }: Props) {
-  const bg = { pink: colors.pink, mint: colors.mint, sky: colors.sky }[tone];
+const TONE_BG: Record<NonNullable<Props['tone']>, string> = {
+  pink: '#2A1820',
+  mint: '#142220',
+  sky: '#141E28',
+  gold: '#1C1A14',
+};
+
+const TONE_BORDER: Record<NonNullable<Props['tone']>, string> = {
+  pink: colors.pink,
+  mint: colors.mint,
+  sky: colors.sky,
+  gold: colors.gold,
+};
+
+/** Opción seleccionable */
+export function Chip({ label, selected, onPress, tone = 'gold', style, disabled }: Props) {
+  const border = TONE_BORDER[tone];
+  const bg = TONE_BG[tone];
+
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.base, selected ? { backgroundColor: bg } : styles.idle, style]}
+      disabled={disabled}
+      style={[
+        styles.chip,
+        { borderColor: selected ? border : colors.border, backgroundColor: selected ? bg : colors.bgCard },
+        disabled && styles.disabled,
+        style,
+      ]}
     >
       <AppText
-        invert={selected}
         variant="body"
         numberOfLines={1}
-        style={[styles.label, selected && styles.labelOn]}
+        style={[styles.label, selected && { color: colors.text }]}
       >
         {label}
       </AppText>
@@ -31,31 +53,21 @@ export function Chip({ label, selected, onPress, tone = 'mint', style }: Props) 
 }
 
 const styles = StyleSheet.create({
-  base: {
+  chip: {
     minHeight: 44,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    borderRadius: radius.sm,
-    marginRight: spacing.sm,
-    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'visible',
-  },
-  idle: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   label: {
     fontSize: 15,
-    lineHeight: 24,
+    lineHeight: 20,
     textTransform: 'none',
     letterSpacing: 0,
-    ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
+    color: colors.textMuted,
   },
-  labelOn: {
-    fontWeight: '600',
-    color: colors.onAccent,
-  },
+  disabled: { opacity: 0.5 },
 });

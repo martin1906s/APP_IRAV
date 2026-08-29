@@ -19,7 +19,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-3.5-flash-lite"
+        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-3.5-flash-lite",
+        "EXPO_PUBLIC_API_URL": "https://back-irav.onrender.com"
       }
     },
     "production": {
@@ -28,7 +29,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-3.5-flash-lite"
+        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-3.5-flash-lite",
+        "EXPO_PUBLIC_API_URL": "https://back-irav.onrender.com"
       }
     }
   },

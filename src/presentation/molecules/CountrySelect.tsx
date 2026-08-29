@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+    minHeight: 48,
   },
   overlay: {
     flex: 1,

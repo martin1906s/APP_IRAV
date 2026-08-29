@@ -10,7 +10,7 @@ type Props = {
   disabled?: boolean;
 };
 
-/** Átomo: botón */
+/** Botón estándar */
 export function AppButton({ label, onPress, variant = 'primary', style, disabled }: Props) {
   return (
     <Pressable
@@ -29,7 +29,10 @@ export function AppButton({ label, onPress, variant = 'primary', style, disabled
       <AppText
         variant="subtitle"
         invert={variant === 'primary' || variant === 'accent'}
-        style={variant === 'ghost' ? styles.ghostLabel : undefined}
+        style={[
+          styles.label,
+          variant === 'ghost' && styles.ghostLabel,
+        ]}
       >
         {label}
       </AppText>
@@ -39,19 +42,30 @@ export function AppButton({ label, onPress, variant = 'primary', style, disabled
 
 const styles = StyleSheet.create({
   base: {
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
-    alignItems: 'center',
+    minHeight: 48,
   },
-  primary: { backgroundColor: colors.accent },
+  primary: {
+    backgroundColor: colors.accent,
+  },
   ghost: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: colors.accent,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
-  accent: { backgroundColor: colors.accentWarm },
-  pressed: { transform: [{ scale: 0.98 }], opacity: 0.92 },
+  accent: {
+    backgroundColor: colors.accentWarm,
+  },
+  label: {
+    textAlign: 'center',
+    letterSpacing: 0,
+    fontSize: 15,
+  },
+  ghostLabel: { color: colors.text },
+  pressed: { opacity: 0.9 },
   disabled: { opacity: 0.4 },
-  ghostLabel: { color: colors.accent },
 });

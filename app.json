@@ -4,12 +4,12 @@
     "slug": "IRAV",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.jpeg",
+    "icon": "./assets/images/IRAV.png",
     "scheme": "irav",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/logo.jpeg",
+      "image": "./assets/images/IRAV.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
@@ -23,7 +23,7 @@
     "android": {
       "package": "com.irav.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.jpeg",
+        "foregroundImage": "./assets/images/IRAV.png",
         "backgroundColor": "#000000"
       },
       "permissions": [
@@ -53,7 +53,7 @@
       "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
-      "favicon": "./assets/images/logo.jpeg"
+      "favicon": "./assets/images/IRAV.png"
     },
     "plugins": [
       "./plugins/withAndroidReleaseSigning.js",
@@ -64,8 +64,14 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/logo.jpeg",
+          "icon": "./assets/images/IRAV.png",
           "color": "#FFFFFF"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "IRAV necesita acceso a tus fotos para adjuntar imágenes en anuncios."
         }
       ],
       [
@@ -100,7 +106,8 @@
             }
           ]
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

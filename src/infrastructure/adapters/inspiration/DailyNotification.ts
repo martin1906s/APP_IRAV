@@ -12,6 +12,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const MOOD_NOTIFICATION_ID = 'irav-daily-mood';
+
 async function ensureChannel() {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('irav-daily', {
@@ -31,8 +33,11 @@ export async function ensureDailyNotification(
   if (Platform.OS === 'web') return;
   await syncReminderFromSettings(
     profile ?? {
+      documentType: 'CEDULA',
+      documentId: '',
       name: '',
-      age: 0,
+      birthDate: '2000-01-01',
+      phone: '',
       country: '',
       preferredVersionId: 'NVI',
       notificationsEnabled: true,
@@ -47,8 +52,7 @@ export async function syncReminderFromSettings(profile: UserProfile) {
   if (Platform.OS === 'web') return;
 
   try {
-    await Notifications.dismissAllNotificationsAsync();
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.cancelScheduledNotificationAsync(MOOD_NOTIFICATION_ID);
 
     if (!profile.notificationsEnabled) return;
 
@@ -58,6 +62,7 @@ export async function syncReminderFromSettings(profile: UserProfile) {
     await ensureChannel();
 
     await Notifications.scheduleNotificationAsync({
+      identifier: MOOD_NOTIFICATION_ID,
       content: {
         title: 'IRAV',
         body: '¿Cómo te sientes hoy? Tu palabra del día te espera.',

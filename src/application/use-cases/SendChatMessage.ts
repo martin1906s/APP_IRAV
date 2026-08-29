@@ -110,17 +110,26 @@ function findReference(text: string): BibleReference | undefined {
 
 /** Caso de uso: respuesta de chat (la voz la dispara la UI al recibir el texto). */
 export class SendChatMessage {
-  constructor(private readonly ai: AiChatPort) {}
+  constructor(
+    private readonly ai: AiChatPort,
+    private readonly chat?: { saveMessage: (m: ChatMessage) => Promise<void> },
+  ) {}
 
   async execute(input: AiInput): Promise<ChatMessage> {
     const text = await this.ai.reply(input);
 
-    return {
+    const message: ChatMessage = {
       id: `${Date.now()}`,
       role: 'assistant',
       text,
       createdAt: Date.now(),
       reference: findReference(text),
     };
+
+    if (this.chat) {
+      await this.chat.saveMessage(message).catch(() => undefined);
+    }
+
+    return message;
   }
 }
