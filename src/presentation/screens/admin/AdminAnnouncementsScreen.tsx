@@ -40,6 +40,8 @@ export function AdminAnnouncementsScreen() {
     try {
       setItems(await container.admin.listAnnouncements());
       hasDataRef.current = true;
+    } catch {
+      /* conservar el listado ya mostrado */
     } finally {
       if (!silent) setLoading(false);
     }

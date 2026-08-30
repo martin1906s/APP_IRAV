@@ -47,6 +47,8 @@ export function AdminUsersScreen() {
     try {
       setUsers(await container.admin.listUsers());
       hasDataRef.current = true;
+    } catch {
+      /* conservar el listado ya mostrado */
     } finally {
       if (!silent) setLoading(false);
     }

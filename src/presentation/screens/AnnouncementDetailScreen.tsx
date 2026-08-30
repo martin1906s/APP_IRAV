@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { ScreenShell } from '../templates/ScreenShell';
@@ -18,13 +18,18 @@ export function AnnouncementDetailScreen() {
   const announcementId = (route.params as RouteParams).announcementId;
   const [item, setItem] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasDataRef = useRef(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const silent = hasDataRef.current;
+    if (!silent) setLoading(true);
     try {
       setItem(await container.announcements.get(announcementId));
+      hasDataRef.current = true;
+    } catch {
+      /* conservar el detalle ya mostrado */
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [announcementId]);
 

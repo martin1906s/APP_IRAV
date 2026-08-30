@@ -36,16 +36,20 @@ export function AdminSystemSettingsScreen() {
   const [saved, setSaved] = useState(false);
 
   const load = useCallback(async () => {
-    const data = await container.admin.getSettings();
-    setSettings(data);
-    setChatRetentionDays(String(data.chatRetentionDays));
-    setPastoralSummaryMaxWords(String(data.pastoralSummaryMaxWords));
-    setDefaultBibleVersion(data.defaultBibleVersion);
-    setDefaultReminderHour(data.defaultReminderHour);
-    setDefaultReminderMinute(data.defaultReminderMinute);
-    setDailyMoodRequired(data.dailyMoodRequired);
-    setNotificationsEnabledByDefault(data.notificationsEnabledByDefault);
-    setGeminiModelOverride(data.geminiModelOverride ?? '');
+    try {
+      const data = await container.admin.getSettings();
+      setSettings(data);
+      setChatRetentionDays(String(data.chatRetentionDays));
+      setPastoralSummaryMaxWords(String(data.pastoralSummaryMaxWords));
+      setDefaultBibleVersion(data.defaultBibleVersion);
+      setDefaultReminderHour(data.defaultReminderHour);
+      setDefaultReminderMinute(data.defaultReminderMinute);
+      setDailyMoodRequired(data.dailyMoodRequired);
+      setNotificationsEnabledByDefault(data.notificationsEnabledByDefault);
+      setGeminiModelOverride(data.geminiModelOverride ?? '');
+    } catch {
+      /* conservar ajustes ya mostrados */
+    }
   }, []);
 
   useFocusEffect(

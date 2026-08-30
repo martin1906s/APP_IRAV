@@ -42,6 +42,8 @@ export function AdminDashboardScreen() {
       setHighlightCount(stats.highlights);
       setAnalytics(data);
       hasDataRef.current = true;
+    } catch {
+      /* conservar estadísticas ya mostradas */
     } finally {
       if (!silent) setLoading(false);
     }

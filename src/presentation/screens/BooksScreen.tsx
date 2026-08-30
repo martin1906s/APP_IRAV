@@ -30,7 +30,7 @@ export function BooksScreen() {
   const [activeKey, setActiveKey] = useState<string>();
 
   useEffect(() => {
-    container.getBooks.execute().then(setBooks);
+    void container.getBooks.execute().then(setBooks).catch(() => undefined);
   }, []);
 
   const filtered = useMemo(() => {

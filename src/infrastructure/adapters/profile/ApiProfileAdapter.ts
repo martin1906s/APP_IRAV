@@ -2,11 +2,11 @@ import type { UserProfile } from '../../../domain/entities/UserProfile';
 import type { UserProfilePort } from '../../../domain/ports/UserProfilePort';
 import { apiRequest } from '../../api/apiClient';
 import { getStoredUser, updateStoredUser } from '../../api/authStore';
-import { fetchCurrentUser, seedSessionCache } from '../../api/sessionCache';
+import { seedSessionCache } from '../../api/sessionCache';
 
 export class ApiProfileAdapter implements UserProfilePort {
   async get(): Promise<UserProfile | null> {
-    return fetchCurrentUser();
+    return getStoredUser();
   }
 
   async save(profile: UserProfile): Promise<void> {
@@ -27,9 +27,4 @@ export class ApiProfileAdapter implements UserProfilePort {
     await updateStoredUser(updated);
     seedSessionCache(updated);
   }
-}
-
-/** Perfil local inmediato (sin red). */
-export async function getLocalProfile(): Promise<UserProfile | null> {
-  return getStoredUser();
 }

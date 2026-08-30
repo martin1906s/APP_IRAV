@@ -126,6 +126,10 @@ export function AdminUserDetailScreen() {
 
       setHighlights(h);
 
+    } catch {
+
+      /* conservar el detalle ya mostrado */
+
     } finally {
 
       setLoading(false);

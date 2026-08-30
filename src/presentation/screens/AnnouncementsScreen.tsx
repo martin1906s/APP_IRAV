@@ -28,6 +28,8 @@ export function AnnouncementsScreen() {
     try {
       setItems(await container.announcements.list());
       hasDataRef.current = true;
+    } catch {
+      /* conservar el listado ya mostrado */
     } finally {
       if (!silent) setLoading(false);
     }

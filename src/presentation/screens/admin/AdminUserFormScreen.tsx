@@ -49,6 +49,8 @@ export function AdminUserFormScreen() {
       setPhone(user.phone);
       setCountry(user.country);
       setRole(user.role ?? 'USER');
+    } catch {
+      setError('No se pudo cargar el joven. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }

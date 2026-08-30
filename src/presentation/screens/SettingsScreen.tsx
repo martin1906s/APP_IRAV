@@ -38,7 +38,7 @@ export function SettingsScreen() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    container.getProfile.execute().then((p) => {
+    void container.getProfile.execute().then((p) => {
       if (!p) return;
       setProfile(p);
       setName(p.name);
@@ -49,7 +49,7 @@ export function SettingsScreen() {
       setNotifications(p.notificationsEnabled);
       setVoice(p.voiceEnabled);
       setHour(p.reminderHour);
-    });
+    }).catch(() => undefined);
   }, []);
 
   const valid = useMemo(
@@ -72,9 +72,10 @@ export function SettingsScreen() {
       reminderHour: hour,
       reminderMinute: profile.reminderMinute ?? 0,
     };
-    await container.saveProfile.execute(next);
-    container.ai.setProfile(next);
-      if (profile.notificationsEnabled) {
+    try {
+      await container.saveProfile.execute(next);
+      container.ai.setProfile(next);
+      if (next.notificationsEnabled) {
         void registerPushToken();
       }
       await syncReminderFromSettings(next);
@@ -89,10 +90,14 @@ export function SettingsScreen() {
       } catch {
         /* reto opcional */
       }
-    setProfile(next);
-    setSaved(true);
-    setBusy(false);
-    setTimeout(() => setSaved(false), 1800);
+      setProfile(next);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+    } catch {
+      Alert.alert('Error', 'No se pudieron guardar los ajustes. Intenta de nuevo.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const logout = () => {

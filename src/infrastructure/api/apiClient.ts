@@ -1,10 +1,13 @@
 import { env } from '../config/env';
-import { clearSession, getToken } from './authStore';
+import { getToken } from './authStore';
+
+const REQUEST_TIMEOUT_MS = 25_000;
 
 type RequestOptions = {
   method?: string;
   body?: unknown;
   auth?: boolean;
+  timeoutMs?: number;
 };
 
 export class ApiError extends Error {
@@ -14,6 +17,31 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = 'ApiError';
+  }
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError(
+        'El servidor tardó demasiado en responder. Si usas Render gratis, espera unos segundos e intenta de nuevo.',
+        0,
+      );
+    }
+    throw new ApiError(
+      `No hay conexión con el servidor (${env.apiUrl}). Revisa tu internet o EXPO_PUBLIC_API_URL en .env`,
+      0,
+    );
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -27,17 +55,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${env.apiUrl}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  const res = await fetchWithTimeout(
+    `${env.apiUrl}${path}`,
+    {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    },
+    options.timeoutMs ?? REQUEST_TIMEOUT_MS,
+  );
 
   const json = await res.json().catch(() => ({}));
-
-  if (res.status === 401) {
-    await clearSession();
-  }
 
   if (!res.ok) {
     const message =

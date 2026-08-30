@@ -19,10 +19,10 @@ export function VersionsScreen() {
   const [q, setQ] = useState('');
 
   useEffect(() => {
-    container.getVersions.execute().then(setVersions);
-    container.getProfile.execute().then((p) => {
+    void container.getVersions.execute().then(setVersions).catch(() => undefined);
+    void container.getProfile.execute().then((p) => {
       if (p) setPreferredId(p.preferredVersionId);
-    });
+    }).catch(() => undefined);
   }, []);
 
   const filtered = useMemo(() => {

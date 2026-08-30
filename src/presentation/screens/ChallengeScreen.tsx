@@ -117,7 +117,7 @@ export function ChallengeScreen() {
           subtitle={status ? `${status.monthLabel} · se reinicia cada mes` : 'Crece cada día del mes'}
         />
 
-        {error ? (
+        {error && !status ? (
           <>
             <AppText muted>{error}</AppText>
             <Spacer />

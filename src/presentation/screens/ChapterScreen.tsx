@@ -34,19 +34,24 @@ export function ChapterScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const result = await container.getChapter.execute(versionId, bookId, chapter);
-    setData(result);
-    await loadHighlights();
-    setLoading(false);
-    await saveLastReading({
-      versionId,
-      versionName,
-      bookId,
-      bookName,
-      chapters,
-      chapter,
-      verse,
-    });
+    try {
+      const result = await container.getChapter.execute(versionId, bookId, chapter);
+      setData(result);
+      await loadHighlights();
+      await saveLastReading({
+        versionId,
+        versionName,
+        bookId,
+        bookName,
+        chapters,
+        chapter,
+        verse,
+      });
+    } catch {
+      /* conservar el capítulo ya mostrado */
+    } finally {
+      setLoading(false);
+    }
   }, [versionId, versionName, bookId, bookName, chapters, chapter, verse, loadHighlights]);
 
   useEffect(() => {
@@ -54,29 +59,37 @@ export function ChapterScreen() {
   }, [load]);
 
   const handleHighlight = async (v: { number: number; text: string }, color: string) => {
-    const saved = await container.highlights.upsert({
-      versionId,
-      bookId,
-      bookName,
-      chapter,
-      verse: v.number,
-      verseText: v.text,
-      color,
-    });
-    setHighlights((prev) => {
-      const rest = prev.filter((h) => h.verse !== v.number);
-      return [...rest, saved].sort((a, b) => a.verse - b.verse);
-    });
+    try {
+      const saved = await container.highlights.upsert({
+        versionId,
+        bookId,
+        bookName,
+        chapter,
+        verse: v.number,
+        verseText: v.text,
+        color,
+      });
+      setHighlights((prev) => {
+        const rest = prev.filter((h) => h.verse !== v.number);
+        return [...rest, saved].sort((a, b) => a.verse - b.verse);
+      });
+    } catch {
+      /* el subrayado no debe sacar de la lectura */
+    }
   };
 
   const handleRemove = async (v: { number: number }) => {
-    const existing = highlights.find((h) => h.verse === v.number);
-    if (existing) {
-      await container.highlights.remove(existing.id);
-    } else {
-      await container.highlights.removeByVerse(versionId, bookId, chapter, v.number);
+    try {
+      const existing = highlights.find((h) => h.verse === v.number);
+      if (existing) {
+        await container.highlights.remove(existing.id);
+      } else {
+        await container.highlights.removeByVerse(versionId, bookId, chapter, v.number);
+      }
+      setHighlights((prev) => prev.filter((h) => h.verse !== v.number));
+    } catch {
+      /* el subrayado no debe sacar de la lectura */
     }
-    setHighlights((prev) => prev.filter((h) => h.verse !== v.number));
   };
 
   const goBack = () => {

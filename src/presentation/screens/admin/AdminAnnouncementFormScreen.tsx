@@ -47,6 +47,8 @@ export function AdminAnnouncementFormScreen() {
       setBody(item.body);
       setImageUri(item.imageUrl);
       setRemoveImage(false);
+    } catch {
+      Alert.alert('Error', 'No se pudo cargar el anuncio.');
     } finally {
       setLoading(false);
     }
@@ -62,11 +64,12 @@ export function AdminAnnouncementFormScreen() {
   );
 
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para adjuntar una imagen.');
-      return;
-    }
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para adjuntar una imagen.');
+        return;
+      }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -81,6 +84,9 @@ export function AdminAnnouncementFormScreen() {
     setImageBase64(asset.base64 ?? null);
     setImageMimeType(asset.mimeType ?? 'image/jpeg');
     setRemoveImage(false);
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir la galería.');
+    }
   };
 
   const clearImage = () => {

@@ -21,7 +21,10 @@ export function IconButton({
   style,
 }: Props) {
   return (
-    <Pressable onPress={onPress} style={[styles.base, { backgroundColor: bg }, style]}>
+    <Pressable
+      onPress={onPress}
+      style={[styles.base, { backgroundColor: bg }, style]}
+    >
       <Ionicons name={name} size={size} color={color} />
     </Pressable>
   );

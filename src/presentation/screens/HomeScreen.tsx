@@ -54,26 +54,30 @@ export function HomeScreen() {
   const [lastReading, setLastReading] = useState<LastReading | null>(null);
 
   const load = useCallback(async () => {
-    const [profile, today, moods, reading] = await Promise.all([
-      container.getProfile.execute(),
-      container.getTodayInspiration.execute(),
-      container.getRecentMoods.execute(7),
-      getLastReading(),
-    ]);
+    try {
+      const [profile, today, moods, reading] = await Promise.all([
+        container.getProfile.execute(),
+        container.getTodayInspiration.execute(),
+        container.getRecentMoods.execute(7),
+        getLastReading(),
+      ]);
 
-    if (profile) {
-      setName(profile.name);
-      container.ai.setProfile(profile);
-      const version = BIBLE_VERSIONS.find((v) => v.id === profile.preferredVersionId);
-      setPreferredVersion({
-        id: profile.preferredVersionId,
-        name: version?.name ?? profile.preferredVersionId,
-      });
+      if (profile) {
+        setName(profile.name);
+        container.ai.setProfile(profile);
+        const version = BIBLE_VERSIONS.find((v) => v.id === profile.preferredVersionId);
+        setPreferredVersion({
+          id: profile.preferredVersionId,
+          name: version?.name ?? profile.preferredVersionId,
+        });
+      }
+      setInspiration(today.inspiration);
+      if (today.inspiration) void refreshHomeWidgets(today.inspiration);
+      setRecentMoods(moods);
+      setLastReading(reading);
+    } catch {
+      /* la pantalla sigue con los datos locales */
     }
-    setInspiration(today.inspiration);
-    if (today.inspiration) void refreshHomeWidgets(today.inspiration);
-    setRecentMoods(moods);
-    setLastReading(reading);
   }, []);
 
   useFocusEffect(

@@ -8,7 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ChatMessage } from '../../domain/entities/ChatMessage';
 import { container } from '../../composition/container';
@@ -33,8 +33,10 @@ export function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
+    let active = true;
     void (async () => {
       const local = await getStoredUser();
+      if (!active) return;
       if (local) {
         container.ai.setProfile(local);
         setUserName(local.name);
@@ -43,66 +45,38 @@ export function ChatScreen() {
 
       try {
         const history = await container.chat.listMessages();
+        if (!active) return;
         if (history.length > 0) {
           setMessages(history);
-        } else if (local) {
-          setMessages([
-            {
-              id: 'welcome',
-              role: 'assistant',
-              text: `Hola ${local.name}, soy Jesús. Puedes escribirme o grabar tu voz. Estoy aquí para darte paz y claridad.`,
-              createdAt: Date.now(),
-            },
-          ]);
+          return;
         }
       } catch {
-        if (local) {
-          setMessages([
-            {
-              id: 'welcome',
-              role: 'assistant',
-              text: `Hola ${local.name}, soy Jesús. Puedes escribirme o grabar tu voz. Estoy aquí para darte paz y claridad.`,
-              createdAt: Date.now(),
-            },
-          ]);
-        }
+        /* sin historial remoto */
       }
 
-      void container.getProfile.execute().then((p) => {
-        if (!p) return;
-        container.ai.setProfile(p);
-        setUserName(p.name);
-        setVoiceEnabled(p.voiceEnabled);
-      });
+      if (active && local) {
+        setMessages([
+          {
+            id: 'welcome',
+            role: 'assistant',
+            text: `Hola ${local.name}, soy Jesús. Puedes escribirme o grabar tu voz. Estoy aquí para darte paz y claridad.`,
+            createdAt: Date.now(),
+          },
+        ]);
+      }
     })();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void getStoredUser().then((p) => {
-        if (!p) return;
-        container.ai.setProfile(p);
-        setUserName(p.name);
-        setVoiceEnabled(p.voiceEnabled);
-      });
-    }, []),
-  );
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const sub = Keyboard.addListener(showEvent, () => {
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
-    });
-    return () => sub.remove();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const tabBarOffset = 56 + Math.max(insets.bottom, 6);
 
-  const push = (msg: ChatMessage, persist = true) => {
+  const push = useCallback((msg: ChatMessage, persist = true) => {
     setMessages((prev) => [...prev, msg]);
     if (persist) void container.chat.saveMessage(msg).catch(() => undefined);
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
-  };
+    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+  }, []);
 
   const speakMessage = async (message: ChatMessage) => {
     if (!message.text.trim()) return;
@@ -116,7 +90,7 @@ export function ChatScreen() {
 
   const sendText = async () => {
     const value = text.trim();
-    if (!value || busy) return;
+    if (!value || busy || recording) return;
 
     push({ id: `${Date.now()}-u`, role: 'user', text: value, createdAt: Date.now() });
     setText('');
@@ -139,10 +113,21 @@ export function ChatScreen() {
 
   const toggleMic = async () => {
     if (busy) return;
+    Keyboard.dismiss();
 
     if (!recording) {
-      await container.audio.start();
-      setRecording(true);
+      try {
+        await container.audio.start();
+        setRecording(true);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'No se pudo iniciar la grabación.';
+        push({
+          id: `${Date.now()}-e`,
+          role: 'assistant',
+          text: msg,
+          createdAt: Date.now(),
+        });
+      }
       return;
     }
 
@@ -181,28 +166,24 @@ export function ChatScreen() {
     }
   };
 
-  return (
-    <ScreenShell padded={false}>
-      <KeyboardAvoidingView
+  const content = (
+    <>
+      <View style={styles.pad}>
+        <AppHeader
+          title="Jesús"
+          subtitle={userName ? `Contigo, ${userName}` : 'Asistente espiritual'}
+        />
+      </View>
+      <FlatList
+        ref={listRef}
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? tabBarOffset : 0}
-      >
-        <View style={styles.pad}>
-          <AppHeader
-            title="Jesús"
-            subtitle={userName ? `Contigo, ${userName}` : 'Asistente espiritual'}
-          />
-        </View>
-        <FlatList
-          ref={listRef}
-          style={styles.flex}
-          data={messages}
-          keyExtractor={(m) => m.id}
-          contentContainerStyle={styles.list}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          renderItem={({ item }) => (
+        data={messages}
+        keyExtractor={(m) => m.id}
+        contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="on-drag"
+        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+        renderItem={({ item }) => (
           <ChatBubble
             message={item}
             speaking={speakingId === item.id}
@@ -237,15 +218,30 @@ export function ChatScreen() {
           ) : null
         }
       />
-        <ChatComposer
-          value={text}
-          onChangeText={setText}
-          onSend={sendText}
-          onMic={toggleMic}
-          recording={recording}
-          busy={busy}
-        />
-      </KeyboardAvoidingView>
+      <ChatComposer
+        value={text}
+        onChangeText={setText}
+        onSend={sendText}
+        onMic={toggleMic}
+        recording={recording}
+        busy={busy}
+      />
+    </>
+  );
+
+  return (
+    <ScreenShell padded={false}>
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior="padding"
+          keyboardVerticalOffset={tabBarOffset}
+        >
+          {content}
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={styles.flex}>{content}</View>
+      )}
     </ScreenShell>
   );
 }

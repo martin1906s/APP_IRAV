@@ -35,7 +35,13 @@ export function resolveApiUrl(): string {
   // Expo Go / dev build en teléfono físico: misma IP que Metro (Wi‑Fi local)
   const lanIp = hostFromExpo();
   if (lanIp) {
-    return `http://${lanIp}:${API_PORT}`;
+    const url = `http://${lanIp}:${API_PORT}`;
+    if (__DEV__) {
+      console.warn(
+        `[IRAV] EXPO_PUBLIC_API_URL=auto → backend local ${url}. Para producción usa EXPO_PUBLIC_API_URL=https://back-irav.onrender.com`,
+      );
+    }
+    return url;
   }
 
   // Emulador Android

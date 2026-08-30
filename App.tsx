@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Linking, LogBox, View } from 'react-native';
+import { ActivityIndicator, Linking, LogBox, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import type { NavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -21,7 +21,8 @@ import * as Notifications from 'expo-notifications';
 import { container } from './src/composition/container';
 import { RootTabs } from './src/presentation/navigation/RootTabs';
 import { AuthProvider } from './src/presentation/auth/AuthContext';
-import { GuardedDailyMoodScreen } from './src/presentation/auth/guardedScreens';
+import { AppErrorBoundary } from './src/presentation/components/AppErrorBoundary';
+import { DailyMoodScreen } from './src/presentation/screens/DailyMoodScreen';
 import { LoginScreen } from './src/presentation/screens/LoginScreen';
 import { RegisterScreen } from './src/presentation/screens/RegisterScreen';
 import { getStoredUser, clearSession } from './src/infrastructure/api/authStore';
@@ -96,7 +97,7 @@ export default function App() {
   const [session, setSession] = useState<UserProfile | null>(null);
   sessionRef.current = session;
   const [authView, setAuthView] = useState<AuthView>('login');
-  const [needsMood, setNeedsMood] = useState(true);
+  const [needsMood, setNeedsMood] = useState(false);
   const [dailyMoodRequired, setDailyMoodRequired] = useState(true);
 
   const [fontsLoaded] = useFonts({
@@ -111,53 +112,56 @@ export default function App() {
     Syne_700Bold,
   });
 
-  const refreshSession = useCallback(async () => {
+  const hydrateExtras = useCallback(async (user: UserProfile) => {
+    container.ai.setProfile(user);
+    void registerPushToken();
+    try {
+      const appConfig = await container.config.get();
+      setDailyMoodRequired(appConfig.dailyMoodRequired);
+      if (!appConfig.dailyMoodRequired) {
+        setNeedsMood(false);
+      } else {
+        const today = await container.getTodayInspiration.execute();
+        setNeedsMood(!today.mood);
+      }
+    } catch {
+      try {
+        const today = await container.getTodayInspiration.execute();
+        setNeedsMood(!today.mood);
+      } catch {
+        setNeedsMood(false);
+      }
+    }
+    try {
+      const challenge = await container.challenges.getStatus();
+      await syncChallengeReminders({
+        enrolled: challenge.enrolled,
+        hasChallengeToday: challenge.hasChallengeToday,
+        todayCompleted: challenge.todayCompleted,
+        notificationsEnabled: user.notificationsEnabled,
+      });
+    } catch {
+      /* reto opcional al iniciar */
+    }
+    try {
+      await syncReminderFromSettings(user);
+    } catch {
+      /* recordatorio opcional */
+    }
+  }, []);
+
+  const restoreLocalSession = useCallback(async () => {
     const cached = await getStoredUser();
     if (!cached) {
       setSession(null);
       setReady(true);
       return;
     }
-    const remote = await container.auth.me();
-    const user = remote ?? cached;
-    if (user) {
-      container.ai.setProfile(user);
-      setSession(user);
-      try {
-        const appConfig = await container.config.get();
-        setDailyMoodRequired(appConfig.dailyMoodRequired);
-        if (!appConfig.dailyMoodRequired) {
-          setNeedsMood(false);
-        } else {
-          const today = await container.getTodayInspiration.execute();
-          setNeedsMood(!today.mood);
-        }
-      } catch {
-        const today = await container.getTodayInspiration.execute();
-        setNeedsMood(!today.mood);
-      }
-      void registerPushToken();
-      try {
-        const challenge = await container.challenges.getStatus();
-        await syncChallengeReminders({
-          enrolled: challenge.enrolled,
-          hasChallengeToday: challenge.hasChallengeToday,
-          todayCompleted: challenge.todayCompleted,
-          notificationsEnabled: user.notificationsEnabled,
-        });
-      } catch {
-        /* reto opcional al iniciar */
-      }
-      try {
-        await syncReminderFromSettings(user);
-      } catch {
-        /* recordatorio opcional */
-      }
-    } else {
-      setSession(null);
-    }
+    container.ai.setProfile(cached);
+    setSession(cached);
     setReady(true);
-  }, []);
+    void hydrateExtras(cached);
+  }, [hydrateExtras]);
 
   const handleUnauthorized = useCallback(async () => {
     await clearSession();
@@ -167,27 +171,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    refreshSession();
+    void restoreLocalSession();
     setAuthRefreshHandler(handleUnauthorized);
-  }, [refreshSession, handleUnauthorized]);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refreshSession();
-    });
-    return () => sub.remove();
-  }, [refreshSession]);
+  }, [restoreLocalSession, handleUnauthorized]);
 
   useEffect(() => {
     const openMoodIfNeeded = async () => {
       try {
         const appConfig = await container.config.get();
         if (!appConfig.dailyMoodRequired) return;
+        const today = await container.getTodayInspiration.execute();
+        if (!today.mood) setNeedsMood(true);
       } catch {
-        /* usar comportamiento por defecto */
+        /* no interrumpir la navegación */
       }
-      const today = await container.getTodayInspiration.execute();
-      if (!today.mood) setNeedsMood(true);
     };
 
     Linking.getInitialURL().then((url) =>
@@ -209,7 +206,11 @@ export default function App() {
   }, []);
 
   const onLoggedIn = async () => {
-    await refreshSession();
+    const cached = await getStoredUser();
+    if (!cached) return;
+    container.ai.setProfile(cached);
+    setSession(cached);
+    void hydrateExtras(cached);
   };
 
   if (!ready || !fontsLoaded) {
@@ -223,17 +224,19 @@ export default function App() {
   if (!session) {
     return (
       <SafeAreaProvider>
-        {authView === 'login' ? (
-          <LoginScreen
-            onLoggedIn={onLoggedIn}
-            onRegister={() => setAuthView('register')}
-          />
-        ) : (
-          <RegisterScreen
-            onDone={onLoggedIn}
-            onLogin={() => setAuthView('login')}
-          />
-        )}
+        <AppErrorBoundary>
+          {authView === 'login' ? (
+            <LoginScreen
+              onLoggedIn={onLoggedIn}
+              onRegister={() => setAuthView('register')}
+            />
+          ) : (
+            <RegisterScreen
+              onDone={onLoggedIn}
+              onLogin={() => setAuthView('login')}
+            />
+          )}
+        </AppErrorBoundary>
       </SafeAreaProvider>
     );
   }
@@ -241,13 +244,18 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider onUnauthorized={handleUnauthorized}>
-        {needsMood && dailyMoodRequired && session.role !== 'ADMIN' ? (
-          <GuardedDailyMoodScreen onDone={() => setNeedsMood(false)} />
-        ) : (
-          <NavigationContainer ref={navigationRef} theme={theme}>
-            <RootTabs isAdmin={session.role === 'ADMIN'} />
-          </NavigationContainer>
-        )}
+        <AppErrorBoundary>
+          <View style={{ flex: 1 }}>
+            <NavigationContainer ref={navigationRef} theme={theme}>
+              <RootTabs isAdmin={session.role === 'ADMIN'} />
+            </NavigationContainer>
+            {needsMood && dailyMoodRequired && session.role !== 'ADMIN' ? (
+              <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: 20 }}>
+                <DailyMoodScreen onDone={() => setNeedsMood(false)} />
+              </View>
+            ) : null}
+          </View>
+        </AppErrorBoundary>
       </AuthProvider>
     </SafeAreaProvider>
   );

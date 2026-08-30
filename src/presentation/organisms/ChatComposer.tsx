@@ -33,9 +33,10 @@ export function ChatComposer({
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
-        placeholder="Escribe o graba…"
-        editable={!busy && !recording}
+        placeholder={recording ? 'Grabando… suelta el micrófono para enviar' : 'Escribe o graba…'}
+        editable={!busy}
         multiline
+        blurOnSubmit={false}
       />
       <IconButton
         name="send"
