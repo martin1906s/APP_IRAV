@@ -13,6 +13,7 @@ import {
   getLastReading,
   type LastReading,
 } from '../../infrastructure/adapters/reading/LastReadingStore';
+import { getStoredUser } from '../../infrastructure/api/authStore';
 import { colors, fonts, radius, spacing } from '../theme';
 import { LogoMark } from '../molecules/LogoMark';
 import { BIBLE_VERSIONS } from '../../shared/constants/bibleVersions';
@@ -53,7 +54,13 @@ export function HomeScreen() {
   const [lastReading, setLastReading] = useState<LastReading | null>(null);
 
   const load = useCallback(async () => {
-    const profile = await container.getProfile.execute();
+    const [profile, today, moods, reading] = await Promise.all([
+      container.getProfile.execute(),
+      container.getTodayInspiration.execute(),
+      container.getRecentMoods.execute(7),
+      getLastReading(),
+    ]);
+
     if (profile) {
       setName(profile.name);
       container.ai.setProfile(profile);
@@ -63,17 +70,24 @@ export function HomeScreen() {
         name: version?.name ?? profile.preferredVersionId,
       });
     }
-    const today = await container.getTodayInspiration.execute();
     setInspiration(today.inspiration);
-    if (today.inspiration) await refreshHomeWidgets(today.inspiration);
-    const moods = await container.getRecentMoods.execute(7);
+    if (today.inspiration) void refreshHomeWidgets(today.inspiration);
     setRecentMoods(moods);
-    setLastReading(await getLastReading());
+    setLastReading(reading);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      void getStoredUser().then((profile) => {
+        if (!profile) return;
+        setName(profile.name);
+        const version = BIBLE_VERSIONS.find((v) => v.id === profile.preferredVersionId);
+        setPreferredVersion({
+          id: profile.preferredVersionId,
+          name: version?.name ?? profile.preferredVersionId,
+        });
+      });
+      void load();
     }, [load]),
   );
 

@@ -14,6 +14,7 @@ import type {
   ChallengeStatus,
 } from '../../domain/entities/Challenge';
 import { syncChallengeReminders } from '../../infrastructure/adapters/challenges/ChallengeNotifications';
+import { getStoredUser } from '../../infrastructure/api/authStore';
 import { colors, fonts, radius, spacing } from '../theme';
 
 const CATEGORY_META: Record<ChallengeCategory, { emoji: string; color: string }> = {
@@ -26,7 +27,7 @@ const CATEGORY_META: Record<ChallengeCategory, { emoji: string; color: string }>
 };
 
 async function syncRemindersFromStatus(status: ChallengeStatus) {
-  const profile = await container.getProfile.execute();
+  const profile = await getStoredUser();
   await syncChallengeReminders({
     enrolled: status.enrolled,
     hasChallengeToday: status.hasChallengeToday,

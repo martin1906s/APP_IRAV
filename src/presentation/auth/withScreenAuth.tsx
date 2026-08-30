@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { verifySession, type RequiredRole } from '../../infrastructure/api/sessionGuard';
+import { getLocalSession, verifySession, type RequiredRole } from '../../infrastructure/api/sessionGuard';
 import { useAuth } from './AuthContext';
 import { colors } from '../theme';
 
@@ -23,24 +23,39 @@ function AuthGate({ children }: { children: ReactNode }) {
 function useSessionGate(requiredRole: RequiredRole) {
   const { onUnauthorized } = useAuth();
   const [allowed, setAllowed] = useState(false);
+  const validatedRef = useRef(false);
 
-  const revalidate = useCallback(() => {
-    let active = true;
-    setAllowed(false);
+  const revalidate = useCallback(
+    (background = false) => {
+      let active = true;
 
-    void verifySession(requiredRole).then((user) => {
-      if (!active) return;
-      if (!user) {
-        onUnauthorized();
-        return;
+      if (!validatedRef.current) {
+        void getLocalSession(requiredRole).then((local) => {
+          if (!active || !local) return;
+          validatedRef.current = true;
+          setAllowed(true);
+        });
       }
-      setAllowed(true);
-    });
 
-    return () => {
-      active = false;
-    };
-  }, [onUnauthorized, requiredRole]);
+      void verifySession(requiredRole).then((user) => {
+        if (!active) return;
+        if (!user) {
+          if (validatedRef.current && background) return;
+          validatedRef.current = false;
+          setAllowed(false);
+          onUnauthorized();
+          return;
+        }
+        validatedRef.current = true;
+        setAllowed(true);
+      });
+
+      return () => {
+        active = false;
+      };
+    },
+    [onUnauthorized, requiredRole],
+  );
 
   return { allowed, revalidate };
 }
@@ -48,10 +63,13 @@ function useSessionGate(requiredRole: RequiredRole) {
 function createFocusGuard<P extends object>(Screen: ComponentType<P>, requiredRole: RequiredRole) {
   return function FocusGuardedScreen(props: P) {
     const { allowed, revalidate } = useSessionGate(requiredRole);
+    const mountedRef = useRef(false);
 
     useFocusEffect(
       useCallback(() => {
-        return revalidate();
+        const cleanup = revalidate(mountedRef.current);
+        mountedRef.current = true;
+        return cleanup;
       }, [revalidate]),
     );
 
@@ -71,7 +89,7 @@ function createMountGuard<P extends object>(Screen: ComponentType<P>, requiredRo
   return function MountGuardedScreen(props: P) {
     const { allowed, revalidate } = useSessionGate(requiredRole);
 
-    useEffect(() => revalidate(), [revalidate]);
+    useEffect(() => revalidate(false), [revalidate]);
 
     if (!allowed) {
       return (

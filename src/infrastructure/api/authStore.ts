@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import type { UserProfile } from '../../domain/entities/UserProfile';
+import { invalidateSessionCache } from './sessionCache';
 
 const TOKEN_KEY = 'irav.auth.token';
 const USER_KEY = 'irav.auth.user';
@@ -24,6 +25,7 @@ export async function getStoredUser(): Promise<UserProfile | null> {
 }
 
 export async function clearSession(): Promise<void> {
+  invalidateSessionCache();
   await SecureStore.deleteItemAsync(TOKEN_KEY);
   await SecureStore.deleteItemAsync(USER_KEY);
 }

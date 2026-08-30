@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,13 +20,16 @@ export function AnnouncementsScreen() {
   const nav = useNavigation<any>();
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasDataRef = useRef(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const silent = hasDataRef.current;
+    if (!silent) setLoading(true);
     try {
       setItems(await container.announcements.list());
+      hasDataRef.current = true;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 

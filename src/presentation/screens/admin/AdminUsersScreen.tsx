@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -39,13 +39,16 @@ export function AdminUsersScreen() {
   const nav = useNavigation<any>();
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasDataRef = useRef(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const silent = hasDataRef.current;
+    if (!silent) setLoading(true);
     try {
       setUsers(await container.admin.listUsers());
+      hasDataRef.current = true;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 

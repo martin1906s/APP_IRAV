@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -23,25 +23,27 @@ export function AdminDashboardScreen() {
   const [highlightCount, setHighlightCount] = useState(0);
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasDataRef = useRef(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const silent = hasDataRef.current;
+    if (!silent) setLoading(true);
     try {
-      const profile = await container.getProfile.execute();
-      if (profile) setName(profile.name);
-
-      const [stats, data] = await Promise.all([
+      const [profile, stats, data] = await Promise.all([
+        container.getProfile.execute(),
         container.admin.getStats(),
         container.admin.getAnalytics(),
       ]);
 
+      if (profile) setName(profile.name);
       setUserCount(stats.users);
       setMoodCount(stats.moods);
       setChatCount(stats.chats);
       setHighlightCount(stats.highlights);
       setAnalytics(data);
+      hasDataRef.current = true;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 

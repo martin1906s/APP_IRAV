@@ -1,6 +1,7 @@
 import type { UserProfile } from '../../../domain/entities/UserProfile';
 import { apiRequest } from '../../api/apiClient';
 import { saveSession, clearSession } from '../../api/authStore';
+import { seedSessionCache } from '../../api/sessionCache';
 
 type AuthResponse = {
   accessToken: string;
@@ -16,6 +17,7 @@ export class ApiAuthAdapter {
     });
 
     await saveSession(result.accessToken, result.user);
+    seedSessionCache(result.user);
     return result;
   }
 
@@ -36,6 +38,7 @@ export class ApiAuthAdapter {
     });
 
     await saveSession(result.accessToken, result.user);
+    seedSessionCache(result.user);
     return result;
   }
 

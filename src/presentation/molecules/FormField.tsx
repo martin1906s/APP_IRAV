@@ -8,6 +8,7 @@ type FieldKind =
   | 'name'
   | 'document'
   | 'documentNumeric'
+  | 'identityDocument'
   | 'loginUsername'
   | 'loginPassword'
   | 'newPassword'
@@ -16,7 +17,7 @@ type FieldKind =
   | 'email'
   | 'uuid';
 
-type Props = Omit<TextInputProps, 'keyboardType' | 'secureTextEntry' | 'autoCapitalize'> & {
+type Props = Omit<TextInputProps, 'secureTextEntry' | 'autoCapitalize'> & {
   label: string;
   kind?: FieldKind;
 };
@@ -49,6 +50,12 @@ const FIELD_CONFIG: Record<
     autoComplete: 'username',
     textContentType: 'username',
     importantForAutofill: 'yes',
+    autoCorrect: false,
+  },
+  identityDocument: {
+    autoCapitalize: 'characters',
+    autoComplete: 'off',
+    importantForAutofill: 'no',
     autoCorrect: false,
   },
   loginUsername: {
@@ -99,7 +106,11 @@ export function FormField({ label, kind = 'text', ...inputProps }: Props) {
       <AppText variant="caption" style={styles.label}>
         {label}
       </AppText>
-      <AppInput {...config} {...inputProps} />
+      <AppInput
+        {...config}
+        {...inputProps}
+        keyboardType={inputProps.keyboardType ?? config.keyboardType}
+      />
     </View>
   );
 }

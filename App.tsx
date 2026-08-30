@@ -25,7 +25,6 @@ import { GuardedDailyMoodScreen } from './src/presentation/auth/guardedScreens';
 import { LoginScreen } from './src/presentation/screens/LoginScreen';
 import { RegisterScreen } from './src/presentation/screens/RegisterScreen';
 import { getStoredUser, clearSession } from './src/infrastructure/api/authStore';
-import { verifySession } from './src/infrastructure/api/sessionGuard';
 import type { UserProfile } from './src/domain/entities/UserProfile';
 import { colors } from './src/presentation/theme';
 import { setAuthRefreshHandler } from './src/infrastructure/api/authRefresh';
@@ -167,14 +166,6 @@ export default function App() {
     setReady(true);
   }, []);
 
-  const handleNavStateChange = useCallback(() => {
-    if (!session) return;
-    const role = session.role === 'ADMIN' ? 'ADMIN' : 'USER';
-    void verifySession(role).then((user) => {
-      if (!user) void handleUnauthorized();
-    });
-  }, [session, handleUnauthorized]);
-
   useEffect(() => {
     refreshSession();
     setAuthRefreshHandler(handleUnauthorized);
@@ -253,7 +244,7 @@ export default function App() {
         {needsMood && dailyMoodRequired && session.role !== 'ADMIN' ? (
           <GuardedDailyMoodScreen onDone={() => setNeedsMood(false)} />
         ) : (
-          <NavigationContainer ref={navigationRef} theme={theme} onStateChange={handleNavStateChange}>
+          <NavigationContainer ref={navigationRef} theme={theme}>
             <RootTabs isAdmin={session.role === 'ADMIN'} />
           </NavigationContainer>
         )}

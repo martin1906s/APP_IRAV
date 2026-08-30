@@ -169,9 +169,11 @@ export function AdminUserFormScreen() {
 
         <FormField
           label="Documento"
-          kind={documentType === 'CEDULA' ? 'documentNumeric' : 'document'}
+          kind="identityDocument"
+          keyboardType={documentType === 'CEDULA' ? 'number-pad' : 'default'}
           value={documentId}
           onChangeText={setDocumentId}
+          editable={!busy}
         />
         <FormField
           label={isEdit ? 'Restablecer contraseña (opcional)' : 'Contraseña'}

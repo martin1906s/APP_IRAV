@@ -1,30 +1,27 @@
 import type { UserProfile, UserRole } from '../../domain/entities/UserProfile';
-import { apiRequest } from './apiClient';
-import { clearSession, getToken, updateStoredUser } from './authStore';
+import { getStoredUser } from './authStore';
+import { fetchCurrentUser } from './sessionCache';
 
 export type RequiredRole = UserRole | 'ANY';
 
-/** Verifica token, sesión remota y rol. */
-export async function verifySession(requiredRole: RequiredRole): Promise<UserProfile | null> {
-  const token = await getToken();
-  if (!token) return null;
+function roleAllowed(user: UserProfile, requiredRole: RequiredRole): boolean {
+  if (requiredRole === 'ANY') return true;
+  if (requiredRole === 'USER') return user.role === 'USER' || user.role === 'ADMIN';
+  return user.role === requiredRole;
+}
 
-  try {
-    const user = await apiRequest<UserProfile>('/auth/me');
-    if (requiredRole !== 'ANY') {
-      const allowed =
-        requiredRole === 'USER'
-          ? user.role === 'USER' || user.role === 'ADMIN'
-          : user.role === requiredRole;
-      if (!allowed) {
-        await clearSession();
-        return null;
-      }
-    }
-    await updateStoredUser(user);
-    return user;
-  } catch {
-    await clearSession();
-    return null;
-  }
+/** Verifica token y rol. Usa caché para evitar /auth/me en cada pantalla. */
+export async function verifySession(requiredRole: RequiredRole): Promise<UserProfile | null> {
+  const user = await fetchCurrentUser();
+  if (!user) return null;
+  if (!roleAllowed(user, requiredRole)) return null;
+  return user;
+}
+
+/** Lectura rápida local para mostrar la UI sin esperar red. */
+export async function getLocalSession(requiredRole: RequiredRole): Promise<UserProfile | null> {
+  const stored = await getStoredUser();
+  if (!stored) return null;
+  if (!roleAllowed(stored, requiredRole)) return null;
+  return stored;
 }

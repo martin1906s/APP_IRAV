@@ -12,6 +12,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ChatMessage } from '../../domain/entities/ChatMessage';
 import { container } from '../../composition/container';
+import { getStoredUser } from '../../infrastructure/api/authStore';
 import { ScreenShell } from '../templates/ScreenShell';
 import { AppHeader } from '../organisms/AppHeader';
 import { ChatComposer } from '../organisms/ChatComposer';
@@ -32,37 +33,53 @@ export function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
-    container.getProfile.execute().then(async (p) => {
-      if (p) {
-        container.ai.setProfile(p);
-        setUserName(p.name);
-        setVoiceEnabled(p.voiceEnabled);
+    void (async () => {
+      const local = await getStoredUser();
+      if (local) {
+        container.ai.setProfile(local);
+        setUserName(local.name);
+        setVoiceEnabled(local.voiceEnabled);
       }
+
       try {
         const history = await container.chat.listMessages();
         if (history.length > 0) {
           setMessages(history);
-          return;
+        } else if (local) {
+          setMessages([
+            {
+              id: 'welcome',
+              role: 'assistant',
+              text: `Hola ${local.name}, soy Jesús. Puedes escribirme o grabar tu voz. Estoy aquí para darte paz y claridad.`,
+              createdAt: Date.now(),
+            },
+          ]);
         }
       } catch {
-        /* sin historial remoto */
+        if (local) {
+          setMessages([
+            {
+              id: 'welcome',
+              role: 'assistant',
+              text: `Hola ${local.name}, soy Jesús. Puedes escribirme o grabar tu voz. Estoy aquí para darte paz y claridad.`,
+              createdAt: Date.now(),
+            },
+          ]);
+        }
       }
-      if (p) {
-        setMessages([
-          {
-            id: 'welcome',
-            role: 'assistant',
-            text: `Hola ${p.name}, soy Jesús. Puedes escribirme o grabar tu voz. Estoy aquí para darte paz y claridad.`,
-            createdAt: Date.now(),
-          },
-        ]);
-      }
-    });
+
+      void container.getProfile.execute().then((p) => {
+        if (!p) return;
+        container.ai.setProfile(p);
+        setUserName(p.name);
+        setVoiceEnabled(p.voiceEnabled);
+      });
+    })();
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      container.getProfile.execute().then((p) => {
+      void getStoredUser().then((p) => {
         if (!p) return;
         container.ai.setProfile(p);
         setUserName(p.name);
