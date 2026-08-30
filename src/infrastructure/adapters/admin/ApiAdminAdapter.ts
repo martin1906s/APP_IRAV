@@ -84,6 +84,7 @@ export type UpdateAnnouncementPayload = {
 export type SendAnnouncementResult = {
   recipientsCount: number;
   targetedUsers: number;
+  targetedDevices?: number;
   announcement: Announcement;
 };
 

@@ -4,12 +4,15 @@ import type { DailyInspiration } from '../../../domain/entities/DailyInspiration
 import type { UserProfile } from '../../../domain/entities/UserProfile';
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const isAnnouncement = Boolean(notification.request.content.data?.announcementId);
+    return {
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: isAnnouncement,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 const MOOD_NOTIFICATION_ID = 'irav-daily-mood';

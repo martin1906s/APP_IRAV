@@ -61,9 +61,12 @@ export function AdminAnnouncementsScreen() {
         onPress: async () => {
           try {
             const result = await container.admin.sendAnnouncement(item.id);
+            const targeted = result.targetedDevices ?? result.targetedUsers ?? 0;
             Alert.alert(
-              'Enviado',
-              `Notificación enviada a ${result.recipientsCount} dispositivo(s).`,
+              targeted === 0 ? 'Anuncio publicado' : 'Enviado',
+              targeted === 0
+                ? 'El anuncio quedó publicado, pero ningún teléfono tiene notificaciones registradas. Cada usuario debe abrir la app instalada (APK, no Expo Go) e iniciar sesión.'
+                : `Se envió a ${result.recipientsCount} de ${targeted} dispositivo(s) registrados.`,
             );
             load();
           } catch {

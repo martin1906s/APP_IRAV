@@ -22,6 +22,18 @@ import { colors, fonts, radius, spacing } from '../../theme';
 
 type RouteParams = { announcementId?: string };
 
+function sentMessage(result: { recipientsCount?: number; targetedUsers?: number; targetedDevices?: number }) {
+  const targeted = result.targetedDevices ?? result.targetedUsers ?? 0;
+  const sent = result.recipientsCount ?? 0;
+  return {
+    title: targeted === 0 ? 'Anuncio publicado' : 'Enviado',
+    body:
+      targeted === 0
+        ? 'El anuncio quedó publicado, pero ningún teléfono tiene notificaciones registradas. Cada usuario debe abrir la app instalada (APK, no Expo Go) e iniciar sesión.'
+        : `Se envió a ${sent} de ${targeted} dispositivo(s) registrados.`,
+  };
+}
+
 /** Crear o editar anuncio con imagen opcional */
 export function AdminAnnouncementFormScreen() {
   const nav = useNavigation<any>();
@@ -113,12 +125,14 @@ export function AdminAnnouncementFormScreen() {
         await container.admin.updateAnnouncement(announcementId, payload);
         if (sendNow) {
           const result = await container.admin.sendAnnouncement(announcementId);
-          Alert.alert('Enviado', `Notificación enviada a ${result.recipientsCount} dispositivo(s).`);
+          const info = sentMessage(result);
+          Alert.alert(info.title, info.body);
         }
       } else {
         const result = await container.admin.createAnnouncement({ ...payload, sendNow });
         if (sendNow && result && 'recipientsCount' in result) {
-          Alert.alert('Enviado', `Notificación enviada a ${result.recipientsCount} dispositivo(s).`);
+          const info = sentMessage(result);
+          Alert.alert(info.title, info.body);
         }
       }
       nav.goBack();
