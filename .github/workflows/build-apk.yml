@@ -18,6 +18,8 @@ jobs:
       EXPO_PUBLIC_GEMINI_API_KEY: ${{ secrets.EXPO_PUBLIC_GEMINI_API_KEY }}
       EXPO_PUBLIC_GEMINI_MODEL: ${{ vars.EXPO_PUBLIC_GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
       EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://back-irav.onrender.com' }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || vars.EXPO_PUBLIC_SUPABASE_URL || 'https://udvccrhuqeiqejhiuakk.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_p_XVFg2oNiXVg3NRYXgBhQ_T2_mbkvw' }}
 
     steps:
       - name: Checkout
@@ -49,10 +51,12 @@ jobs:
           EXPO_PUBLIC_GEMINI_API_KEY=${EXPO_PUBLIC_GEMINI_API_KEY}
           EXPO_PUBLIC_GEMINI_MODEL=${EXPO_PUBLIC_GEMINI_MODEL}
           EXPO_PUBLIC_API_URL=${API_URL}
+          EXPO_PUBLIC_SUPABASE_URL=${EXPO_PUBLIC_SUPABASE_URL}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY=${EXPO_PUBLIC_SUPABASE_ANON_KEY}
           EOF
 
           echo "Contenido de .env (sin claves):"
-          grep -v GEMINI_API_KEY .env | sed 's/=.*/=***/'
+          grep -v GEMINI_API_KEY .env | grep -v SUPABASE | sed 's/=.*/=***/'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -61,7 +65,7 @@ jobs:
           java-version: 17
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Prebuild Android project
         run: npx expo prebuild --platform android --no-install
