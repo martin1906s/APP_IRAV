@@ -78,14 +78,19 @@ jobs:
             exit 1
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
-          cat >> android/gradle.properties << EOF
-          MYAPP_UPLOAD_STORE_FILE=release.keystore
-          MYAPP_UPLOAD_STORE_PASSWORD=${ANDROID_KEYSTORE_PASSWORD}
-          MYAPP_UPLOAD_KEY_ALIAS=${ANDROID_KEY_ALIAS}
-          MYAPP_UPLOAD_KEY_PASSWORD=${ANDROID_KEY_PASSWORD}
-          android.enableMinifyInReleaseBuilds=true
-          android.enableShrinkResourcesInReleaseBuilds=true
-          EOF
+          echo "" >> android/gradle.properties
+          cat >> android/gradle.properties << 'EOF'
+
+MYAPP_UPLOAD_STORE_FILE=release.keystore
+MYAPP_UPLOAD_STORE_PASSWORD=${ANDROID_KEYSTORE_PASSWORD}
+MYAPP_UPLOAD_KEY_ALIAS=${ANDROID_KEY_ALIAS}
+MYAPP_UPLOAD_KEY_PASSWORD=${ANDROID_KEY_PASSWORD}
+android.enableMinifyInReleaseBuilds=true
+android.enableShrinkResourcesInReleaseBuilds=true
+EOF
+          sed -i "s|\${ANDROID_KEYSTORE_PASSWORD}|${ANDROID_KEYSTORE_PASSWORD}|g" android/gradle.properties
+          sed -i "s|\${ANDROID_KEY_ALIAS}|${ANDROID_KEY_ALIAS}|g" android/gradle.properties
+          sed -i "s|\${ANDROID_KEY_PASSWORD}|${ANDROID_KEY_PASSWORD}|g" android/gradle.properties
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
