@@ -1,19 +1,28 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+// import * as Notifications from 'expo-notifications';
+const Notifications: any = {
+  setNotificationHandler: () => {},
+  setNotificationChannelAsync: async () => {},
+  cancelScheduledNotificationAsync: async () => {},
+  requestPermissionsAsync: async () => ({ granted: true }),
+  scheduleNotificationAsync: async () => {},
+  SchedulableTriggerInputTypes: { DAILY: 'daily' },
+  AndroidImportance: { DEFAULT: 3 },
+};
 import type { DailyInspiration } from '../../../domain/entities/DailyInspiration';
 import type { UserProfile } from '../../../domain/entities/UserProfile';
 
-Notifications.setNotificationHandler({
-  handleNotification: async (notification) => {
-    const isAnnouncement = Boolean(notification.request.content.data?.announcementId);
-    return {
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: isAnnouncement,
-      shouldSetBadge: false,
-    };
-  },
-});
+// Notifications.setNotificationHandler({
+//   handleNotification: async (notification) => {
+//     const isAnnouncement = Boolean(notification.request.content.data?.announcementId);
+//     return {
+//       shouldShowBanner: true,
+//       shouldShowList: true,
+//       shouldPlaySound: isAnnouncement,
+//       shouldSetBadge: false,
+//     };
+//   },
+// });
 
 const MOOD_NOTIFICATION_ID = 'irav-daily-mood';
 

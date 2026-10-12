@@ -1,5 +1,14 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+// import * as Notifications from 'expo-notifications';
+const Notifications: any = {
+  setNotificationChannelAsync: async () => {},
+  cancelScheduledNotificationAsync: async () => {},
+  requestPermissionsAsync: async () => ({ granted: true }),
+  getPermissionsAsync: async () => ({ granted: true }),
+  scheduleNotificationAsync: async () => {},
+  SchedulableTriggerInputTypes: { DATE: 'date' },
+  AndroidImportance: { DEFAULT: 3 },
+};
 
 const CHALLENGE_HOURS = [8, 12, 20] as const;
 const CHALLENGE_IDS = CHALLENGE_HOURS.map((h) => `irav-challenge-${h}`);

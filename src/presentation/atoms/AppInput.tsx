@@ -2,7 +2,7 @@ import { TextInput, StyleSheet, TextInputProps, View } from 'react-native';
 import { colors, fonts, radius, spacing, typography } from '../theme';
 
 type Props = TextInputProps & {
-  variant?: 'boxed' | 'underline';
+  variant?: 'boxed' | 'underline' | 'glass';
 };
 
 /** Campo de texto */
@@ -17,6 +17,16 @@ export function AppInput({ variant = 'boxed', ...props }: Props) {
         />
         <View style={styles.underlineBar} />
       </View>
+    );
+  }
+
+  if (variant === 'glass') {
+    return (
+      <TextInput
+        placeholderTextColor="rgba(255, 255, 255, 0.4)"
+        {...props}
+        style={[styles.glass, props.style]}
+      />
     );
   }
 
@@ -57,4 +67,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 48,
   },
+  glass: {
+    ...typography.body,
+    fontFamily: fonts.sans,
+    color: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    fontSize: 16,
+    minHeight: 48,
+  }
 });

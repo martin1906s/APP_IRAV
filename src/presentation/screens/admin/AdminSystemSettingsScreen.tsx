@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, View, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ScreenShell } from '../../templates/ScreenShell';
 import { AppHeader } from '../../organisms/AppHeader';
@@ -15,12 +16,12 @@ import type {
   SystemSettings,
   UpdateSystemSettingsPayload,
 } from '../../../infrastructure/adapters/admin/ApiAdminAdapter';
-import { colors, fonts, radius, spacing } from '../../theme';
+import { colors, fonts, radius, spacing, shadows } from '../../theme';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = [0, 15, 30, 45];
 
-/** Parámetros globales del sistema (solo admin) */
+/** Parámetros globales del sistema con estética litúrgica */
 export function AdminSystemSettingsScreen() {
   const nav = useNavigation();
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -87,7 +88,7 @@ export function AdminSystemSettingsScreen() {
       const updated = await container.admin.updateSettings(payload);
       setSettings(updated);
       setSaved(true);
-      setTimeout(() => setSaved(false), 1800);
+      setTimeout(() => setSaved(false), 2000);
     } catch {
       Alert.alert('Error', 'No se pudieron guardar los ajustes. Intenta de nuevo.');
     } finally {
@@ -96,10 +97,10 @@ export function AdminSystemSettingsScreen() {
   };
 
   const logout = () => {
-    Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
+    Alert.alert('Cerrar sesión', '¿Deseas salir del panel de administración?', [
       { text: 'Cancelar', style: 'cancel' },
       {
-        text: 'Salir',
+        text: 'Cerrar sesión',
         style: 'destructive',
         onPress: async () => {
           await container.auth.logout();
@@ -114,61 +115,88 @@ export function AdminSystemSettingsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <AppHeader
           title="Sistema"
-          subtitle="Parámetros globales de IRAV"
+          subtitle="Parámetros Globales e Infraestructura"
           onBack={nav.canGoBack() ? () => nav.goBack() : undefined}
         />
 
-        <View style={styles.section}>
-          <AppText variant="caption" style={styles.sectionTitle}>
-            Chat y datos
-          </AppText>
+        {/* SECCIÓN: RETENCIÓN DE CHAT */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconWrap, { backgroundColor: colors.purpleSoft }]}>
+              <Ionicons name="chatbubbles" size={18} color={colors.purple} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="subtitle" style={styles.cardTitle}>Chat y Depuración</AppText>
+              <AppText muted style={styles.cardSub}>Políticas de almacenamiento</AppText>
+            </View>
+          </View>
+
+          <Spacer size="xs" />
           <FormField
-            label="Retención de mensajes (días)"
+            label="Retención de mensajes de chat (días)"
             kind="documentNumeric"
             value={chatRetentionDays}
             onChangeText={setChatRetentionDays}
           />
           <AppText muted style={styles.fieldHint}>
-            Los mensajes más antiguos se borran automáticamente cada noche.
+            Los mensajes más antiguos se depuran automáticamente para optimizar la base de datos.
           </AppText>
         </View>
 
         <Spacer size="md" />
 
-        <View style={styles.section}>
-          <AppText variant="caption" style={styles.sectionTitle}>
-            Resumen pastoral IA
-          </AppText>
+        {/* SECCIÓN: INTELIGENCIA ARTIFICIAL */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconWrap, { backgroundColor: '#FFF9E6' }]}>
+              <Ionicons name="sparkles" size={18} color={colors.goldDark} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="subtitle" style={styles.cardTitle}>Inteligencia Artificial Gemini</AppText>
+              <AppText muted style={styles.cardSub}>Resumen pastoral y acompañamiento</AppText>
+            </View>
+          </View>
+
+          <Spacer size="xs" />
           <FormField
-            label="Máximo de palabras"
+            label="Límite máximo de palabras (Resumen pastoral)"
             kind="documentNumeric"
             value={pastoralSummaryMaxWords}
             onChangeText={setPastoralSummaryMaxWords}
           />
           <AppText muted style={styles.fieldHint}>
-            Resúmenes cortos y precisos. Recomendado: 80–120 palabras.
+            Longitud óptima para lectura rápida: entre 80 y 120 palabras.
           </AppText>
-          <Spacer size="sm" />
+          <Spacer size="xs" />
           <FormField
-            label="Modelo Gemini (opcional)"
+            label="Modelo Gemini (Opcional)"
             kind="text"
             value={geminiModelOverride}
             onChangeText={setGeminiModelOverride}
-            placeholder="gemini-2.0-flash"
+            placeholder="gemini-2.5-flash"
           />
           <AppText muted style={styles.fieldHint}>
-            Deja vacío para usar el modelo por defecto del servidor.
+            Por defecto: gemini-2.5-flash. Modifícalo solo si utilizas otra variante.
           </AppText>
         </View>
 
         <Spacer size="md" />
 
-        <View style={styles.section}>
-          <AppText variant="caption" style={styles.sectionTitle}>
-            Nuevos usuarios
-          </AppText>
-          <AppText variant="caption">Versión de Biblia por defecto</AppText>
-          <View style={styles.wrap}>
+        {/* SECCIÓN: PREFERENCIAS PREDETERMINADAS */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconWrap, { backgroundColor: '#EBF3FB' }]}>
+              <Ionicons name="book" size={18} color={colors.info} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="subtitle" style={styles.cardTitle}>Preferencias de Nuevos Miembros</AppText>
+              <AppText muted style={styles.cardSub}>Configuración inicial automática</AppText>
+            </View>
+          </View>
+
+          <Spacer size="xs" />
+          <AppText variant="caption" style={styles.fieldLabel}>Versión Bíblica Predeterminada</AppText>
+          <View style={styles.chipGrid}>
             {BIBLE_VERSIONS.filter((v) => v.language === 'Español').map((v) => (
               <Chip
                 key={v.id}
@@ -178,9 +206,10 @@ export function AdminSystemSettingsScreen() {
               />
             ))}
           </View>
+
           <Spacer size="sm" />
-          <AppText variant="caption">Hora de recordatorio por defecto</AppText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hourScroll}>
+          <AppText variant="caption" style={styles.fieldLabel}>Hora de Recordatorio Matutino</AppText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
             {HOURS.map((h) => (
               <Chip
                 key={h}
@@ -194,52 +223,35 @@ export function AdminSystemSettingsScreen() {
               />
             ))}
           </ScrollView>
+
           <Spacer size="xs" />
-          <View style={styles.wrap}>
-            {MINUTES.filter((m) => m > 0).map((m) => (
-              <Chip
-                key={m}
-                label={`:${String(m).padStart(2, '0')}`}
-                selected={defaultReminderMinute === m}
-                onPress={() => setDefaultReminderMinute(m)}
-              />
-            ))}
-          </View>
-          <Spacer size="sm" />
           <View style={styles.switchRow}>
             <View style={styles.switchBody}>
               <AppText style={styles.switchLabel}>Notificaciones activas por defecto</AppText>
               <AppText muted style={styles.switchHint}>
-                Al crear un joven desde el panel
+                Habilitar recordatorios diarios al registrar un nuevo miembro
               </AppText>
             </View>
             <Switch
               value={notificationsEnabledByDefault}
               onValueChange={setNotificationsEnabledByDefault}
-              trackColor={{ false: colors.border, true: colors.accentSoft }}
-              thumbColor={notificationsEnabledByDefault ? colors.accent : colors.textMuted}
+              trackColor={{ false: colors.border, true: colors.purpleSoft }}
+              thumbColor={notificationsEnabledByDefault ? colors.purple : colors.textMuted}
             />
           </View>
-        </View>
 
-        <Spacer size="md" />
-
-        <View style={styles.section}>
-          <AppText variant="caption" style={styles.sectionTitle}>
-            Experiencia del joven
-          </AppText>
-          <View style={styles.switchRow}>
+          <View style={[styles.switchRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, marginTop: spacing.xs, paddingTop: spacing.sm }]}>
             <View style={styles.switchBody}>
-              <AppText style={styles.switchLabel}>Ánimo diario obligatorio</AppText>
+              <AppText style={styles.switchLabel}>Registro de ánimo obligatorio</AppText>
               <AppText muted style={styles.switchHint}>
-                El joven debe registrar su ánimo antes de usar la app
+                Solicitar el estado de ánimo antes de acceder a la lectura bíblica
               </AppText>
             </View>
             <Switch
               value={dailyMoodRequired}
               onValueChange={setDailyMoodRequired}
-              trackColor={{ false: colors.border, true: colors.accentSoft }}
-              thumbColor={dailyMoodRequired ? colors.accent : colors.textMuted}
+              trackColor={{ false: colors.border, true: colors.purpleSoft }}
+              thumbColor={dailyMoodRequired ? colors.purple : colors.textMuted}
             />
           </View>
         </View>
@@ -247,20 +259,23 @@ export function AdminSystemSettingsScreen() {
         {settings?.updatedAt ? (
           <>
             <Spacer size="sm" />
-            <AppText muted style={styles.updated}>
-              Última actualización: {new Date(settings.updatedAt).toLocaleString('es-EC')}
+            <AppText muted style={styles.updatedText}>
+              Última actualización sincronizada: {new Date(settings.updatedAt).toLocaleString('es-EC')}
             </AppText>
           </>
         ) : null}
 
         <Spacer size="lg" />
         <AppButton
-          label={saved ? 'Guardado ✓' : busy ? 'Guardando…' : 'Guardar cambios'}
+          label={saved ? '¡Ajustes guardados! ✓' : busy ? 'Guardando…' : 'Guardar configuración'}
           onPress={save}
           disabled={busy}
         />
-        <Spacer size="md" />
-        <AppButton label="Cerrar sesión" onPress={logout} variant="ghost" />
+        <Spacer size="sm" />
+        <Pressable style={styles.logoutBtn} onPress={logout}>
+          <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+          <AppText style={styles.logoutText}>Cerrar sesión de administrador</AppText>
+        </Pressable>
         <Spacer size="xxl" />
       </ScrollView>
     </ScreenShell>
@@ -269,57 +284,87 @@ export function AdminSystemSettingsScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
-  section: {
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.md,
+  card: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
     padding: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: '#EFEAE2',
+    ...shadows.card,
   },
-  sectionTitle: {
-    color: colors.accentWarm,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  wrap: {
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitle: {
+    fontFamily: fonts.serifSemi,
+    fontSize: 15,
+    color: colors.text,
+  },
+  cardSub: {
+    fontSize: 12,
+  },
+  fieldLabel: {
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    marginBottom: 4,
+  },
+  fieldHint: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
+    gap: 6,
+    marginTop: 2,
+  },
+  chipScroll: {
+    marginTop: 2,
+    marginBottom: 4,
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.xs,
+    marginTop: spacing.xs,
   },
   switchBody: { flex: 1 },
   switchLabel: {
     fontFamily: fonts.sansMedium,
-    fontSize: 15,
+    fontSize: 14,
     color: colors.text,
-    textTransform: 'none',
-    letterSpacing: 0,
   },
   switchHint: {
     fontSize: 12,
     marginTop: 2,
-    textTransform: 'none',
-    letterSpacing: 0,
   },
-  updated: {
+  updatedText: {
     fontSize: 12,
     textAlign: 'center',
-    textTransform: 'none',
-    letterSpacing: 0,
   },
-  fieldHint: {
-    fontSize: 12,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
-    textTransform: 'none',
-    letterSpacing: 0,
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(220, 76, 94, 0.08)',
   },
-  hourScroll: { marginTop: spacing.xs, marginBottom: spacing.xs },
+  logoutText: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 14,
+    color: colors.danger,
+  },
 });

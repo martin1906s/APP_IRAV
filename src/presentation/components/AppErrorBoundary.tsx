@@ -1,17 +1,19 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { refreshAuth } from '../../infrastructure/api/authRefresh';
 import { AppText } from '../atoms/AppText';
+import { AppErrorView } from './AppErrorView';
 import { colors, fonts, radius, spacing } from '../theme';
 
 type Props = { children: ReactNode };
-type State = { hasError: boolean };
+type State = { hasError: boolean; error?: Error };
 
 /** Evita que un fallo de render deje la app en blanco. */
 export class AppErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -22,15 +24,13 @@ export class AppErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <View style={styles.wrap}>
-        <AppText variant="title">Algo se interrumpió</AppText>
-        <AppText muted style={styles.hint}>
-          Puedes continuar. Tu sesión sigue activa.
-        </AppText>
-        <Pressable style={styles.btn} onPress={() => this.setState({ hasError: false })}>
-          <AppText style={styles.btnText}>Volver</AppText>
-        </Pressable>
-      </View>
+      <AppErrorView
+        error={this.state.error?.message}
+        onRetry={() => {
+          this.setState({ hasError: false, error: undefined });
+          refreshAuth();
+        }}
+      />
     );
   }
 }

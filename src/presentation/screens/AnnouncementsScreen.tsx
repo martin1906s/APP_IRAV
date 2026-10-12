@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   card: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgElevated,
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,

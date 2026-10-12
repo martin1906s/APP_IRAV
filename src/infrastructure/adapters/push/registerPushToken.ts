@@ -1,8 +1,22 @@
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
-import { apiRequest } from '../../api/apiClient';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { supabase } from '../../supabase/supabaseConfig';
+import { getStoredUser, updateStoredUser } from '../../api/authStore';
+
+const isExpoGo =
+  Constants.appOwnership === 'expo' ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+function getNotificationsModule() {
+  if (isExpoGo || Platform.OS === 'web') return null;
+  try {
+    return require('expo-notifications');
+  } catch (e) {
+    if (__DEV__) console.log('[IRAV] expo-notifications no disponible en runtime:', e);
+    return null;
+  }
+}
 
 function resolveProjectId(): string | null {
   return (
@@ -12,7 +26,7 @@ function resolveProjectId(): string | null {
   );
 }
 
-async function ensureAnnouncementChannels() {
+async function ensureAnnouncementChannels(Notifications: any) {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('irav-announcements', {
     name: 'Anuncios IRAV',
@@ -28,9 +42,23 @@ async function ensureAnnouncementChannels() {
   });
 }
 
-/** Registra este dispositivo para anuncios. Un usuario puede tener varios teléfonos. */
+/** Registra este dispositivo para anuncios y guarda el token en Supabase. */
 export async function registerPushToken(): Promise<void> {
   if (Platform.OS === 'web' || !Device.isDevice) return;
+
+  // A partir de Expo SDK 53, las notificaciones remotas en Android no están soportadas en Expo Go.
+  // Solo se ejecutan en Builds de Desarrollo (Dev Client) o en APK standalone de producción.
+  if (isExpoGo) {
+    if (__DEV__) {
+      console.log(
+        '[IRAV] Las notificaciones Push remotas se omiten en Expo Go (SDK 53+). Funcionarán en el APK final.',
+      );
+    }
+    return;
+  }
+
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
 
   try {
     const current = await Notifications.getPermissionsAsync();
@@ -39,23 +67,35 @@ export async function registerPushToken(): Promise<void> {
       : await Notifications.requestPermissionsAsync();
     if (!permission.granted) return;
 
-    await ensureAnnouncementChannels();
+    await ensureAnnouncementChannels(Notifications);
 
     const projectId = resolveProjectId();
-    if (!projectId) return;
+    const token = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
 
-    const token = await Notifications.getExpoPushTokenAsync({ projectId });
-    await apiRequest('/users/me/push-token', {
-      method: 'POST',
-      body: {
-        expoPushToken: token.data,
-        platform: Platform.OS,
-        deviceName: Device.modelName ?? Device.deviceName ?? Platform.OS,
-      },
-    });
+    if (!token?.data) return;
+
+    // Guardar en la sesión local
+    const localUser = await getStoredUser();
+    if (localUser) {
+      if (localUser.expoPushToken !== token.data) {
+        await updateStoredUser({ ...localUser, expoPushToken: token.data });
+      }
+
+      // Actualizar en la base de datos Supabase
+      await supabase
+        .from('users')
+        .update({
+          expoPushToken: token.data,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq('id', localUser.id);
+    }
   } catch (error) {
     if (__DEV__) {
-      console.warn('[IRAV] No se pudo registrar push', error);
+      console.warn('[IRAV] No se pudo registrar push token:', error);
     }
   }
 }
+

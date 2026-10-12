@@ -8,5 +8,5 @@ export const env = {
 };
 
 if (__DEV__) {
-  console.log('[IRAV] API URL →', env.apiUrl);
+  // console.log('[IRAV] API URL →', env.apiUrl);
 }

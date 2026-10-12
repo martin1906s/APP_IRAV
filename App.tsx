@@ -17,7 +17,7 @@ import {
   Outfit_700Bold,
 } from '@expo-google-fonts/outfit';
 import { Syne_600SemiBold, Syne_700Bold } from '@expo-google-fonts/syne';
-import * as Notifications from 'expo-notifications';
+// import * as Notifications from 'expo-notifications';
 import { container } from './src/composition/container';
 import { RootTabs } from './src/presentation/navigation/RootTabs';
 import { AuthProvider } from './src/presentation/auth/AuthContext';
@@ -193,15 +193,16 @@ export default function App() {
     const linkSub = Linking.addEventListener('url', ({ url }) =>
       handleDeepLink(url, navigationRef.current, () => void openMoodIfNeeded()),
     );
-    const notifSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const uri = response.notification.request.content.data?.uri;
-      if (typeof uri === 'string') {
-        handleDeepLink(uri, navigationRef.current, () => void openMoodIfNeeded());
-      }
-    });
+    // COMENTADO POR AHORA PARA EXPO GO (SDK 53+ NO LO SOPORTA)
+    // const notifSub = Notifications.addNotificationResponseReceivedListener((response) => {
+    //   const uri = response.notification.request.content.data?.uri;
+    //   if (typeof uri === 'string') {
+    //     handleDeepLink(uri, navigationRef.current, () => void openMoodIfNeeded());
+    //   }
+    // });
     return () => {
       linkSub.remove();
-      notifSub.remove();
+      // notifSub.remove();
     };
   }, []);
 

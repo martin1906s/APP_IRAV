@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgElevated,
     borderTopWidth: 3,
     borderTopColor: colors.accent,
     padding: spacing.lg,

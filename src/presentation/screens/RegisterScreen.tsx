@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { ScreenShell } from '../templates/ScreenShell';
-import { AuthStage } from '../molecules/AuthStage';
+import { StoryAuthStage } from '../molecules/StoryAuthStage';
 import { AuthAutofillGroup } from '../molecules/AuthAutofillGroup';
 import { CountrySelect } from '../molecules/CountrySelect';
 import { DatePickerField } from '../molecules/DatePickerField';
@@ -31,6 +31,7 @@ export function RegisterScreen({ onDone, onLogin }: Props) {
   const [country, setCountry] = useState('Ecuador');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [step, setStep] = useState(1);
 
   const valid = useMemo(() => {
     return (
@@ -68,86 +69,210 @@ export function RegisterScreen({ onDone, onLogin }: Props) {
     }
   };
 
-  return (
-    <ScreenShell padded={false}>
-      <View style={styles.pad}>
-        <AuthStage
-          title="Crear cuenta"
-          subtitle="Elige una contraseña para acceder a IRAV."
-          footer={
-            <Pressable onPress={onLogin}>
+  if (step === 1) {
+    return (
+      <StoryAuthStage
+        step={1}
+        totalSteps={7}
+        imageSource={require('../../../assets/images/jesusHappy.png')}
+        dialogue="¡Bienaventurado seas! No te preocupes, no te pediré que camines sobre el agua... solo que me digas, ¿cómo te llamas en la tierra de los mortales?"
+        footer={
+          <>
+            <AppButton label="Siguiente" onPress={() => setStep(2)} disabled={name.trim().length < 2} />
+            <Pressable onPress={onLogin} style={{ marginTop: spacing.md }}>
               <AppText style={styles.link}>
                 Ya tengo cuenta — <AppText style={styles.linkAccent}>Entrar →</AppText>
               </AppText>
             </Pressable>
-          }
-        >
+          </>
+        }
+      >
+        <FormField label="Tu Nombre" kind="name" value={name} onChangeText={setName} autoFocus />
+      </StoryAuthStage>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <StoryAuthStage
+        step={2}
+        totalSteps={7}
+        imageSource={require('../../../assets/images/jesusExplicando.png')}
+        dialogue={`¡Un nombre digno de un profeta, ${name || 'amigo'}! Ahora cuéntame, ¿de qué tierras lejanas vienes? Prometo no mandarte plagas.`}
+        footer={
+          <>
+            <AppButton label="Siguiente" onPress={() => setStep(3)} disabled={!country} />
+            <Pressable onPress={() => setStep(1)} style={{ marginTop: spacing.md }}>
+              <AppText style={styles.link}>Volver</AppText>
+            </Pressable>
+          </>
+        }
+      >
+        <CountrySelect value={country} options={COUNTRIES} onChange={setCountry} />
+      </StoryAuthStage>
+    );
+  }
+
+  if (step === 3) {
+    return (
+      <StoryAuthStage
+        step={3}
+        totalSteps={7}
+        imageSource={require('../../../assets/images/jesusCuerpoALaIzq.png')}
+        dialogue="Ni Matusalén tenía tantos años... ¡es broma! Dime, ¿en qué fecha viste por primera vez la luz de este mundo?"
+        footer={
+          <>
+            <AppButton label="Siguiente" onPress={() => setStep(4)} disabled={!isValidBirthDate(birthDate)} />
+            <Pressable onPress={() => setStep(2)} style={{ marginTop: spacing.md }}>
+              <AppText style={styles.link}>Volver</AppText>
+            </Pressable>
+          </>
+        }
+      >
+        <DatePickerField label="Tu fecha de nacimiento" value={birthDate} onChange={setBirthDate} />
+      </StoryAuthStage>
+    );
+  }
+
+  if (step === 4) {
+    return (
+      <StoryAuthStage
+        step={4}
+        totalSteps={7}
+        imageSource={require('../../../assets/images/jesusRelajadoSentado.png')}
+        dialogue="En mis tiempos usábamos palomas mensajeras, pero dicen que ahora usan celulares. ¿Cuál es tu número para mandarte buenas nuevas?"
+        footer={
+          <>
+            <AppButton label="Siguiente" onPress={() => setStep(5)} disabled={phone.trim().length < 8} />
+            <Pressable onPress={() => setStep(3)} style={{ marginTop: spacing.md }}>
+              <AppText style={styles.link}>Volver</AppText>
+            </Pressable>
+          </>
+        }
+      >
+        <FormField
+          label="Tu Teléfono"
+          kind="phone"
+          value={phone}
+          onChangeText={setPhone}
+          placeholder="+593 99 123 4567"
+          autoFocus
+        />
+      </StoryAuthStage>
+    );
+  }
+
+  if (step === 5) {
+    return (
+      <StoryAuthStage
+        step={5}
+        totalSteps={7}
+        imageSource={require('../../../assets/images/jesusIndicando.png')}
+        dialogue="Ha llegado el momento de la verdad. ¿Traes contigo tu Cédula local o acaso cruzaste los mares y traes Pasaporte?"
+        footer={
           <View style={styles.chips}>
             <Chip
               label="Cédula"
               selected={documentType === 'CEDULA'}
-              onPress={() => setDocumentType('CEDULA')}
+              onPress={() => {
+                setDocumentType('CEDULA');
+                setStep(6);
+              }}
               tone="gold"
+              style={{ flex: 1 }}
             />
+            <Spacer size="sm" horizontal />
             <Chip
               label="Pasaporte"
               selected={documentType === 'PASSPORT'}
-              onPress={() => setDocumentType('PASSPORT')}
+              onPress={() => {
+                setDocumentType('PASSPORT');
+                setStep(6);
+              }}
               tone="mint"
+              style={{ flex: 1 }}
             />
           </View>
-          <Spacer size="sm" />
-          <AuthAutofillGroup>
-            <FormField
-              label="Documento"
-              kind={documentType === 'CEDULA' ? 'documentNumeric' : 'document'}
-              value={documentId}
-              onChangeText={setDocumentId}
-              placeholder={documentType === 'CEDULA' ? '1723456789' : 'A1234567'}
-              nativeID="irav-register-username"
-            />
-            <FormField
-              label="Contraseña"
-              kind="newPassword"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mín. 6 caracteres"
-              nativeID="irav-register-password"
-            />
-          </AuthAutofillGroup>
-          <FormField label="Nombre" kind="name" value={name} onChangeText={setName} />
-          <DatePickerField label="Nacimiento" value={birthDate} onChange={setBirthDate} />
-          <FormField
-            label="Teléfono"
-            kind="phone"
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="+593 99 123 4567"
-          />
-          <AppText variant="caption" style={styles.fieldLabel}>
-            País
-          </AppText>
-          <CountrySelect value={country} options={COUNTRIES} onChange={setCountry} />
-          {error ? <AppText style={styles.error}>{error}</AppText> : null}
-          <Spacer size="lg" />
+        }
+      >
+        <Pressable onPress={() => setStep(4)} style={{ alignItems: 'center' }}>
+          <AppText style={styles.link}>Volver al paso anterior</AppText>
+        </Pressable>
+      </StoryAuthStage>
+    );
+  }
+
+  if (step === 6) {
+    return (
+      <StoryAuthStage
+        step={6}
+        totalSteps={7}
+        imageSource={require('../../../assets/images/jesusExplicando.png')}
+        dialogue="Escribe los números de tu documento. Tranquilo, no se los pasaré a los romanos ni a los fariseos."
+        footer={
+          <>
+            <AppButton label="Siguiente" onPress={() => setStep(7)} disabled={documentId.trim().length < 5} />
+            <Pressable onPress={() => setStep(5)} style={{ marginTop: spacing.md }}>
+              <AppText style={styles.link}>Volver</AppText>
+            </Pressable>
+          </>
+        }
+      >
+        <FormField
+          label="Número de documento"
+          kind={documentType === 'CEDULA' ? 'documentNumeric' : 'document'}
+          value={documentId}
+          onChangeText={setDocumentId}
+          placeholder={documentType === 'CEDULA' ? '1723456789' : 'A1234567'}
+          nativeID="irav-register-username"
+          autoFocus
+          onSubmitEditing={() => setStep(7)}
+        />
+      </StoryAuthStage>
+    );
+  }
+
+  return (
+    <StoryAuthStage
+      step={7}
+      totalSteps={7}
+      imageSource={require('../../../assets/images/jesusIndicando.png')}
+      dialogue="Finalmente, crea una clave secreta. Hazla más fuerte que las murallas de Jericó para que nadie la adivine."
+      footer={
+        <>
           <AppButton label="Crear mi cuenta" onPress={save} disabled={!valid || busy} />
-        </AuthStage>
-      </View>
-    </ScreenShell>
+          <Pressable onPress={() => setStep(6)} style={{ marginTop: spacing.md }}>
+            <AppText style={styles.link}>Volver</AppText>
+          </Pressable>
+        </>
+      }
+    >
+      <FormField
+        label="Contraseña"
+        kind="newPassword"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="Mín. 6 caracteres"
+        nativeID="irav-register-password"
+        autoFocus
+        onSubmitEditing={save}
+      />
+      {error ? <AppText style={styles.error}>{error}</AppText> : null}
+    </StoryAuthStage>
   );
 }
 
 const styles = StyleSheet.create({
-  pad: { flex: 1, paddingHorizontal: spacing.lg },
   fieldLabel: { color: colors.textMuted, marginBottom: spacing.xs },
   chips: { flexDirection: 'row' },
   error: {
     marginTop: spacing.sm,
-    color: colors.danger,
+    color: '#ff6b6b', // un rojo más claro para fondos oscuros
     fontFamily: fonts.sans,
     fontSize: 14,
     textTransform: 'none',
     letterSpacing: 0,
+    textAlign: 'center',
   },
   link: {
     fontFamily: fonts.sans,
@@ -155,10 +280,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'none',
     letterSpacing: 0,
+    textAlign: 'center',
   },
   linkAccent: {
     fontFamily: fonts.sansSemi,
-    color: colors.accent,
+    color: colors.gold,
     textTransform: 'none',
     letterSpacing: 0,
   },

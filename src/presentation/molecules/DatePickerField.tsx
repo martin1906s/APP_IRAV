@@ -1,15 +1,7 @@
-import { useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { StyleSheet, View, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../atoms/AppText';
-import { AppButton } from '../atoms/AppButton';
-import {
-  formatDateDisplay,
-  formatDateISO,
-  parseDateISO,
-} from '../../shared/utils/dateFormat';
-import { colors, fonts, radius, spacing } from '../theme';
+import { colors, fonts, radius, spacing, typography } from '../theme';
 
 type Props = {
   label?: string;
@@ -18,84 +10,52 @@ type Props = {
   minimumDate?: Date;
   maximumDate?: Date;
   placeholder?: string;
+  variant?: 'boxed' | 'glass';
 };
 
-/** Campo de fecha con calendario nativo */
 export function DatePickerField({
   label,
   value,
   onChange,
-  minimumDate = new Date(1900, 0, 1),
-  maximumDate = new Date(),
-  placeholder = 'Selecciona fecha',
+  placeholder = 'AAAA-MM-DD',
+  variant = 'boxed',
 }: Props) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(() => parseDateISO(value));
+  const handleChange = (text: string) => {
+    // Solo permitir números y guiones
+    let cleaned = text.replace(/[^0-9]/g, '');
+    
+    // Auto-formato AAAA-MM-DD
+    if (cleaned.length > 4 && cleaned.length <= 6) {
+      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+    } else if (cleaned.length > 6) {
+      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4, 6) + '-' + cleaned.slice(6, 8);
+    }
 
-  const openPicker = () => {
-    setDraft(parseDateISO(value));
-    setOpen(true);
+    onChange(cleaned);
   };
 
-  const onAndroidChange = (_: DateTimePickerEvent, selected?: Date) => {
-    setOpen(false);
-    if (selected) onChange(formatDateISO(selected));
-  };
-
-  const confirmIOS = () => {
-    onChange(formatDateISO(draft));
-    setOpen(false);
-  };
+  const isGlass = variant === 'glass';
 
   return (
     <View style={styles.wrap}>
       {label ? (
-        <AppText variant="caption" style={styles.label}>
+        <AppText variant="caption" style={[styles.label, isGlass && { color: 'rgba(255, 255, 255, 0.7)' }]}>
           {label}
         </AppText>
       ) : null}
-      <Pressable style={styles.trigger} onPress={openPicker}>
-        <AppText style={value ? styles.value : styles.placeholder}>
-          {value ? formatDateDisplay(value) : placeholder}
-        </AppText>
-        <Ionicons name="calendar-outline" size={20} color={colors.accent} />
-      </Pressable>
-
-      {open && Platform.OS === 'android' ? (
-        <DateTimePicker
-          value={parseDateISO(value)}
-          mode="date"
-          display="calendar"
-          onChange={onAndroidChange}
-          minimumDate={minimumDate}
-          maximumDate={maximumDate}
+      
+      <View style={isGlass ? styles.triggerGlass : styles.trigger}>
+        <TextInput
+          style={[styles.input, isGlass && { color: '#fff' }]}
+          value={value}
+          onChangeText={handleChange}
+          placeholder={placeholder}
+          placeholderTextColor={isGlass ? 'rgba(255, 255, 255, 0.4)' : colors.textMuted}
+          keyboardType="numeric"
+          maxLength={10}
         />
-      ) : null}
-
-      {Platform.OS === 'ios' ? (
-        <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-          <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
-            <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-              <AppText variant="subtitle" style={styles.sheetTitle}>
-                Fecha de nacimiento
-              </AppText>
-              <DateTimePicker
-                value={draft}
-                mode="date"
-                display="spinner"
-                locale="es-EC"
-                onChange={(_, selected) => {
-                  if (selected) setDraft(selected);
-                }}
-                minimumDate={minimumDate}
-                maximumDate={maximumDate}
-                style={styles.iosPicker}
-              />
-              <AppButton label="Confirmar" onPress={confirmIOS} />
-            </Pressable>
-          </Pressable>
-        </Modal>
-      ) : null}
+        <Ionicons name="calendar-outline" size={20} color={isGlass ? 'rgba(255, 255, 255, 0.7)' : colors.accent} />
+      </View>
     </View>
   );
 }
@@ -106,41 +66,28 @@ const styles = StyleSheet.create({
   trigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
     minHeight: 48,
   },
-  value: {
-    fontFamily: fonts.sans,
+  triggerGlass: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: spacing.md,
+    minHeight: 48,
+  },
+  input: {
+    flex: 1,
+    fontFamily: typography.body.fontFamily,
     fontSize: 16,
     color: colors.text,
-    textTransform: 'none',
-    letterSpacing: 0,
+    paddingVertical: spacing.sm,
   },
-  placeholder: {
-    fontFamily: fonts.sans,
-    fontSize: 16,
-    color: colors.textMuted,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  sheetTitle: { marginBottom: spacing.sm, textAlign: 'center' },
-  iosPicker: { height: 200 },
 });

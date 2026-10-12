@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { ScreenShell } from '../templates/ScreenShell';
-import { AuthStage } from '../molecules/AuthStage';
+import { StoryAuthStage } from '../molecules/StoryAuthStage';
 import { AuthAutofillGroup } from '../molecules/AuthAutofillGroup';
 import { FormField } from '../molecules/FormField';
 import { AppText } from '../atoms/AppText';
@@ -27,6 +27,7 @@ export function LoginScreen({ onLoggedIn, onRegister }: Props) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [step, setStep] = useState(1);
 
   const submit = async () => {
     if (!documentId.trim() || !password || busy) return;
@@ -34,6 +35,10 @@ export function LoginScreen({ onLoggedIn, onRegister }: Props) {
     setError('');
     try {
       const result = await container.auth.login(documentType, documentId.trim(), password);
+      // Guardar sesión para que la app sepa que estamos logueados
+      const { saveSession } = require('../../infrastructure/api/authStore');
+      await saveSession(result.accessToken, result.user);
+      
       container.ai.setProfile(result.user);
       Keyboard.dismiss();
       // Breve pausa en Android para que el gestor de contraseñas pueda ofrecer guardar.
@@ -48,79 +53,77 @@ export function LoginScreen({ onLoggedIn, onRegister }: Props) {
     }
   };
 
-  return (
-    <ScreenShell padded={false}>
-      <View style={styles.pad}>
-        <AuthStage
-          title="Iniciar sesión"
-          subtitle="Usa el acceso rápido del teclado o el gestor de contraseñas de tu teléfono."
-          footer={
-            <Pressable onPress={onRegister}>
+  if (step === 1) {
+    return (
+      <StoryAuthStage
+        imageSource={require('../../../assets/images/jesusExplicando.png')}
+        dialogue="¡Aleluya, has vuelto! Pensé que te habías perdido vagando 40 años por el desierto. Dime, ¿cuáles son los números de tu documento para dejarte entrar?"
+        footer={
+          <>
+            <AppButton label="Siguiente" onPress={() => setStep(2)} disabled={documentId.trim().length < 5} />
+            <Pressable onPress={onRegister} style={{ marginTop: spacing.md }}>
               <AppText style={styles.link}>
                 ¿Primera vez? <AppText style={styles.linkAccent}>Crea tu cuenta →</AppText>
               </AppText>
             </Pressable>
-          }
-        >
-          <AppText variant="caption" style={styles.fieldLabel}>
-            Documento
-          </AppText>
-          <View style={styles.chips}>
-            <Chip
-              label="Cédula"
-              selected={documentType === 'CEDULA'}
-              onPress={() => setDocumentType('CEDULA')}
-              tone="gold"
-            />
-            <Chip
-              label="Pasaporte"
-              selected={documentType === 'PASSPORT'}
-              onPress={() => setDocumentType('PASSPORT')}
-              tone="mint"
-            />
-          </View>
-          <Spacer size="md" />
-          <AuthAutofillGroup>
-            <FormField
-              label="Número de documento"
-              kind={documentType === 'CEDULA' ? 'documentNumeric' : 'document'}
-              value={documentId}
-              onChangeText={setDocumentId}
-              placeholder={documentType === 'CEDULA' ? '1723456789' : 'A1234567'}
-              nativeID="irav-login-username"
-              returnKeyType="next"
-            />
-            <FormField
-              label="Contraseña"
-              kind="loginPassword"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Tu contraseña"
-              nativeID="irav-login-password"
-              returnKeyType="go"
-              onSubmitEditing={submit}
-            />
-          </AuthAutofillGroup>
-          {error ? <AppText style={styles.error}>{error}</AppText> : null}
-          <Spacer size="lg" />
-          <AppButton label="Entrar a IRAV" onPress={submit} disabled={busy} />
-        </AuthStage>
-      </View>
-    </ScreenShell>
+          </>
+        }
+      >
+        <FormField
+          label="Número de documento"
+          kind="documentNumeric"
+          value={documentId}
+          onChangeText={setDocumentId}
+          placeholder="1723456789"
+          nativeID="irav-login-username"
+          returnKeyType="next"
+          onSubmitEditing={() => setStep(2)}
+          autoFocus
+        />
+      </StoryAuthStage>
+    );
+  }
+
+  return (
+    <StoryAuthStage
+      imageSource={require('../../../assets/images/jesusIndicando.png')}
+      dialogue="¡Tranquilo, no es el juicio final! Pero sí necesito esa clave secreta que guardas. Escríbela con fe, prometo que yo no miro."
+      footer={
+        <>
+          <AppButton label="Entrar a IRAV" onPress={submit} disabled={busy || password.length < 6} />
+          <Pressable onPress={() => setStep(1)} style={{ marginTop: spacing.md }}>
+            <AppText style={styles.link}>Volver</AppText>
+          </Pressable>
+        </>
+      }
+    >
+      <FormField
+        label="Contraseña"
+        kind="loginPassword"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="Tu contraseña"
+        nativeID="irav-login-password"
+        returnKeyType="go"
+        onSubmitEditing={submit}
+        autoFocus
+      />
+      {error ? <AppText style={styles.error}>{error}</AppText> : null}
+    </StoryAuthStage>
   );
 }
 
 const styles = StyleSheet.create({
-  pad: { flex: 1, paddingHorizontal: spacing.lg },
   fieldLabel: { color: colors.textMuted, marginBottom: spacing.xs },
   chips: { flexDirection: 'row' },
   error: {
     marginTop: spacing.sm,
-    color: colors.danger,
+    color: '#ff6b6b', // un rojo más claro para fondos oscuros
     fontFamily: fonts.sans,
     fontSize: 14,
     textTransform: 'none',
     letterSpacing: 0,
+    textAlign: 'center',
   },
   link: {
     fontFamily: fonts.sans,
@@ -128,10 +131,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'none',
     letterSpacing: 0,
+    textAlign: 'center',
   },
   linkAccent: {
     fontFamily: fonts.sansSemi,
-    color: colors.accent,
+    color: colors.gold,
     textTransform: 'none',
     letterSpacing: 0,
   },

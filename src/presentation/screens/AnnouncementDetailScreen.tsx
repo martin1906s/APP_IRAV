@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   card: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgElevated,
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,

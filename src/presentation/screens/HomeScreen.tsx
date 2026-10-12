@@ -1,447 +1,663 @@
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { ScreenShell } from '../templates/ScreenShell';
+import { AppHeader } from '../components/AppHeader';
 import { AppText } from '../atoms/AppText';
 import { Spacer } from '../atoms/Spacer';
-import { container } from '../../composition/container';
-import type { DailyInspiration } from '../../domain/entities/DailyInspiration';
-import type { MoodLog } from '../../domain/entities/MoodLog';
-import { refreshHomeWidgets } from '../widgets/refreshHomeWidgets';
-import {
-  getLastReading,
-  type LastReading,
-} from '../../infrastructure/adapters/reading/LastReadingStore';
 import { getStoredUser } from '../../infrastructure/api/authStore';
-import { colors, fonts, radius, spacing } from '../theme';
-import { LogoMark } from '../molecules/LogoMark';
-import { BIBLE_VERSIONS } from '../../shared/constants/bibleVersions';
+import { container } from '../../composition/container';
+import type { Announcement } from '../../infrastructure/adapters/announcements/ApiAnnouncementsAdapter';
+import type { DailyInspiration } from '../../domain/entities/DailyInspiration';
+import { colors, fonts, radius, spacing, shadows } from '../theme';
 
-const QUICK_VERSES = [
-  { label: 'Salmo 23', bookId: 19, bookName: 'Salmos', chapter: 23, chapters: 150 },
-  { label: 'Juan 3:16', bookId: 43, bookName: 'Juan', chapter: 3, verse: 16, chapters: 21 },
-  { label: 'Filipenses 4', bookId: 50, bookName: 'Filipenses', chapter: 4, chapters: 4 },
-  { label: 'Proverbios 3', bookId: 20, bookName: 'Proverbios', chapter: 3, chapters: 31 },
-];
-
-const MOOD_EMOJI: Record<string, string> = {
-  Paz: '🕊️',
-  Alegría: '✨',
-  Ansiedad: '🌊',
-  Tristeza: '💧',
-  Fuerza: '🔥',
-  Gratitud: '🙏',
-};
-
-function todayLabel(): string {
-  return new Date().toLocaleDateString('es-EC', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-}
-
-/** Inicio */
+/** Pantalla de Inicio renovada: Funcional, interactiva y con identidad visual IRAV */
 export function HomeScreen() {
   const nav = useNavigation<any>();
-  const [name, setName] = useState('');
-  const [preferredVersion, setPreferredVersion] = useState<{ id: string; name: string } | null>(
-    null,
-  );
+  const [userName, setUserName] = useState('');
   const [inspiration, setInspiration] = useState<DailyInspiration | null>(null);
-  const [recentMoods, setRecentMoods] = useState<MoodLog[]>([]);
-  const [lastReading, setLastReading] = useState<LastReading | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [profile, today, moods, reading] = await Promise.all([
-        container.getProfile.execute(),
-        container.getTodayInspiration.execute(),
-        container.getRecentMoods.execute(7),
-        getLastReading(),
+      const [user, insp, annList] = await Promise.all([
+        getStoredUser(),
+        container.getDailyInspiration.execute().catch(() => null),
+        container.announcements.list().catch(() => []),
       ]);
 
-      if (profile) {
-        setName(profile.name);
-        container.ai.setProfile(profile);
-        const version = BIBLE_VERSIONS.find((v) => v.id === profile.preferredVersionId);
-        setPreferredVersion({
-          id: profile.preferredVersionId,
-          name: version?.name ?? profile.preferredVersionId,
-        });
-      }
-      setInspiration(today.inspiration);
-      if (today.inspiration) void refreshHomeWidgets(today.inspiration);
-      setRecentMoods(moods);
-      setLastReading(reading);
+      if (user?.name) setUserName(user.name);
+      if (insp) setInspiration(insp);
+      setAnnouncements(annList.slice(0, 3));
     } catch {
-      /* la pantalla sigue con los datos locales */
+      /* conservar información */
+    } finally {
+      setLoading(false);
     }
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   useFocusEffect(
     useCallback(() => {
-      void getStoredUser().then((profile) => {
-        if (!profile) return;
-        setName(profile.name);
-        const version = BIBLE_VERSIONS.find((v) => v.id === profile.preferredVersionId);
-        setPreferredVersion({
-          id: profile.preferredVersionId,
-          name: version?.name ?? profile.preferredVersionId,
-        });
-      });
-      void load();
-    }, [load]),
+      loadData();
+    }, [loadData]),
   );
 
-  const openBibleChapter = (params: {
-    versionId: string;
-    versionName: string;
-    bookId: number;
-    bookName: string;
-    chapters: number;
-    chapter: number;
-    verse?: number;
-  }) => {
-    nav.navigate('BibleTab', {
-      state: {
-        routes: [
-          { name: 'Versions' },
-          {
-            name: 'Books',
-            params: { versionId: params.versionId, versionName: params.versionName },
-          },
-          { name: 'Chapter', params },
-        ],
-        index: 2,
-      },
-    });
-  };
-
-  const openVerse = () => {
-    if (!inspiration) return;
-    openBibleChapter({
-      versionId: inspiration.verse.versionId,
-      versionName: inspiration.verse.versionName,
-      bookId: inspiration.verse.bookId,
-      bookName: inspiration.verse.bookName,
-      chapters: inspiration.verse.chapters,
-      chapter: inspiration.verse.chapter,
-      verse: inspiration.verse.verse,
-    });
-  };
-
-  const openLastReading = () => {
-    if (!lastReading) return;
-    openBibleChapter(lastReading);
-  };
-
-  const openQuickVerse = (item: (typeof QUICK_VERSES)[number]) => {
-    const versionId = preferredVersion?.id ?? 'NVI';
-    const versionName = preferredVersion?.name ?? 'NVI';
-    openBibleChapter({
-      versionId,
-      versionName,
-      bookId: item.bookId,
-      bookName: item.bookName,
-      chapters: item.chapters,
-      chapter: item.chapter,
-      verse: item.verse,
-    });
-  };
-
-  const openBible = () => {
-    nav.navigate('BibleTab', {
-      state: {
-        routes: [{ name: 'Versions' }],
-        index: 0,
-      },
-    });
-  };
-
-  const streak = recentMoods.length;
-  const firstName = name.trim().split(/\s+/)[0] || '';
+  const firstName = userName.trim().split(/\s+/)[0] || 'Joven';
 
   return (
-    <ScreenShell>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={styles.top}>
-          <LogoMark size={40} />
-          <View style={styles.topText}>
-            <AppText variant="hero">{firstName ? `Hola, ${firstName}` : 'Inicio'}</AppText>
-            <AppText muted style={styles.date}>{todayLabel()}</AppText>
-          </View>
-        </View>
+    <View style={styles.container}>
+      {/* Header oficial con logo IRAV */}
+      <AppHeader
+        title="IRAV"
+        subtitle={`¡Hola, ${firstName}!`}
+        onAvatarPress={() => nav.navigate('Profile')}
+      />
 
-        <Spacer size="md" />
-        <Pressable style={styles.announceCard} onPress={() => nav.navigate('Announcements')}>
-          <View style={styles.announceIcon}>
-            <Ionicons name="megaphone-outline" size={20} color={colors.accent} />
-          </View>
-          <View style={styles.announceBody}>
-            <AppText variant="subtitle">Anuncios IRAV</AppText>
-            <AppText muted style={styles.announceHint}>
-              Comunicados y avisos de la comunidad
-            </AppText>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* HERO CARD: DIÁLOGO CON JESÚS Y ACCESO AL CHAT */}
+        <LinearGradient
+          colors={[colors.purpleDark, colors.purple, colors.purpleLight]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroRow}>
+            <View style={styles.heroTextContent}>
+              <View style={styles.heroBadge}>
+                <Image
+                  source={require('../../../assets/images/IRAV.png')}
+                  style={styles.heroBadgeLogo}
+                  resizeMode="contain"
+                />
+                <AppText style={styles.heroBadgeText}>Palabra de Vida</AppText>
+              </View>
 
-        {recentMoods.length > 0 ? (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <AppText variant="subtitle">Tu semana</AppText>
-              <AppText muted style={styles.meta}>
-                {streak} {streak === 1 ? 'día' : 'días'}
+              <AppText style={styles.heroTitle}>
+                &quot;No temas, porque yo estoy contigo&quot;
               </AppText>
-            </View>
-            <View style={styles.moodRow}>
-              {recentMoods
-                .slice()
-                .reverse()
-                .map((log) => (
-                  <View key={log.date} style={styles.moodDot}>
-                    <AppText style={styles.moodEmoji}>{MOOD_EMOJI[log.mood] ?? '·'}</AppText>
-                    <AppText muted style={styles.moodDay}>
-                      {log.date.slice(8, 10)}/{log.date.slice(5, 7)}
-                    </AppText>
-                  </View>
-                ))}
-            </View>
-          </View>
-        ) : null}
-
-        {inspiration ? (
-          <Pressable onPress={openVerse} style={styles.card}>
-            <AppText muted style={styles.label}>
-              Palabra de hoy · {inspiration.mood}
-            </AppText>
-            <AppText variant="subtitle" style={styles.phrase}>
-              {inspiration.phrase}
-            </AppText>
-            <AppText variant="verse" style={styles.verse} numberOfLines={3}>
-              “{inspiration.verse.text}”
-            </AppText>
-            <View style={styles.refRow}>
-              <AppText style={styles.ref}>{inspiration.verse.reference}</AppText>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </View>
-          </Pressable>
-        ) : null}
-
-        {lastReading ? (
-          <Pressable onPress={openLastReading} style={styles.row}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
-            </View>
-            <View style={styles.rowBody}>
-              <AppText variant="subtitle">Continuar leyendo</AppText>
-              <AppText muted style={styles.rowHint}>
-                {lastReading.bookName} {lastReading.chapter} · {lastReading.versionName}
+              <AppText style={styles.heroSub}>
+                ¿Tienes alguna inquietud o necesitas oración hoy? Jesús está listo para escucharte.
               </AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
-        ) : null}
 
-        <View style={styles.section}>
-          <AppText muted style={styles.sectionTitle}>
-            Accesos rápidos
-          </AppText>
-          <View style={styles.quickGrid}>
-            {QUICK_VERSES.map((item) => (
-              <Pressable key={item.label} style={styles.quickChip} onPress={() => openQuickVerse(item)}>
-                <AppText style={styles.quickText}>{item.label}</AppText>
+              <Pressable
+                style={styles.chatCtaBtn}
+                onPress={() => nav.getParent()?.navigate('ChatTab')}
+              >
+                <Ionicons name="chatbubbles" size={16} color={colors.purpleDark} />
+                <AppText style={styles.chatCtaText}>Hablar con Jesús</AppText>
               </Pressable>
-            ))}
+            </View>
+
+            <Image
+              source={require('../../../assets/images/jesusRelajadoSentado.png')}
+              style={styles.jesusHeroImage}
+              resizeMode="contain"
+            />
           </View>
+        </LinearGradient>
+
+        <Spacer size="md" />
+
+        {/* ACCESOS DIRECTOS FUNCIONALES */}
+        <View style={styles.quickGrid}>
+          <Pressable
+            style={styles.quickCard}
+            onPress={() => nav.getParent()?.navigate('BibleTab')}
+          >
+            <View style={[styles.quickIconWrap, { backgroundColor: '#FFF9E6' }]}>
+              <Ionicons name="book" size={22} color={colors.goldDark} />
+            </View>
+            <AppText style={styles.quickTitle}>Lectura Bíblica</AppText>
+            <AppText muted style={styles.quickSub}>Capítulo de hoy</AppText>
+          </Pressable>
+
+          <Pressable
+            style={styles.quickCard}
+            onPress={() => nav.getParent()?.navigate('ChallengeTab')}
+          >
+            <View style={[styles.quickIconWrap, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="trophy" size={22} color={colors.success} />
+            </View>
+            <AppText style={styles.quickTitle}>Reto del Mes</AppText>
+            <AppText muted style={styles.quickSub}>Meta de fe activa</AppText>
+          </Pressable>
+
+          <Pressable
+            style={styles.quickCard}
+            onPress={() => nav.navigate('Announcements')}
+          >
+            <View style={[styles.quickIconWrap, { backgroundColor: colors.purpleSoft }]}>
+              <Ionicons name="megaphone" size={22} color={colors.purple} />
+            </View>
+            <AppText style={styles.quickTitle}>Avisos</AppText>
+            <AppText muted style={styles.quickSub}>Noticias IRAV</AppText>
+          </Pressable>
         </View>
 
         <Spacer size="md" />
 
-        <View style={styles.menu}>
-          <Pressable style={styles.row} onPress={() => nav.navigate('ChatTab')}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.text} />
+        {/* ESTADO DEL DEVOCIONAL / ÁNIMO DEL DÍA O VERSÍCULO */}
+        {inspiration ? (
+          <View style={styles.verseCard}>
+            <View style={styles.verseHeader}>
+              <View style={styles.verseIconBadge}>
+                <Ionicons name="sparkles" size={16} color={colors.goldWarm} />
+              </View>
+              <AppText style={styles.verseBadgeTitle}>
+                {inspiration.mood ? `Palabra de hoy para ti (${inspiration.mood})` : 'Versículo para meditar'}
+              </AppText>
             </View>
-            <View style={styles.rowBody}>
-              <AppText variant="subtitle">Hablar con Jesús</AppText>
-              <AppText muted style={styles.rowHint}>Chat espiritual</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
 
-          <Pressable style={styles.row} onPress={openBible}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="book-outline" size={20} color={colors.text} />
-            </View>
-            <View style={styles.rowBody}>
-              <AppText variant="subtitle">Biblia</AppText>
-              <AppText muted style={styles.rowHint}>Todas las versiones</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
+            <AppText style={styles.verseText}>
+              &quot;{typeof inspiration.verse === 'object' ? inspiration.verse?.text : inspiration.verse}&quot;
+            </AppText>
 
-          <Pressable style={styles.row} onPress={() => nav.navigate('SettingsTab')}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="person-outline" size={20} color={colors.text} />
+            <View style={styles.verseFooter}>
+              <View style={styles.verseRefPill}>
+                <Ionicons name="bookmark-outline" size={13} color={colors.purple} />
+                <AppText style={styles.verseRefText}>
+                  {typeof inspiration.verse === 'object' ? (inspiration.verse?.reference || inspiration.reference) : inspiration.reference}
+                </AppText>
+              </View>
+
+              <Pressable
+                style={styles.verseActionBtn}
+                onPress={() => nav.getParent()?.navigate('BibleTab')}
+              >
+                <AppText style={styles.verseActionText}>Leer en la Biblia</AppText>
+                <Ionicons name="arrow-forward" size={14} color={colors.purple} />
+              </Pressable>
             </View>
-            <View style={styles.rowBody}>
-              <AppText variant="subtitle">Perfil y ajustes</AppText>
-              <AppText muted style={styles.rowHint}>Cuenta y preferencias</AppText>
+          </View>
+        ) : (
+          <View style={styles.moodPromptCard}>
+            <View style={styles.moodPromptLeft}>
+              <View style={styles.moodPromptIcon}>
+                <Ionicons name="sunny" size={20} color={colors.goldDark} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.moodPromptTitle}>¿Cómo estás hoy?</AppText>
+                <AppText muted style={styles.moodPromptSub}>
+                  Registra tu ánimo para recibir tu versículo guiado.
+                </AppText>
+              </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
+            <Pressable
+              style={styles.moodPromptBtn}
+              onPress={() => nav.getParent()?.navigate('BibleTab')}
+            >
+              <AppText style={styles.moodPromptBtnText}>Explorar</AppText>
+            </Pressable>
+          </View>
+        )}
+
+        <Spacer size="md" />
+
+        {/* SECCIÓN DE COMUNICADOS / ANUNCIOS RECIENTES */}
+        <View style={styles.sectionHeaderRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="newspaper-outline" size={18} color={colors.purple} />
+            <AppText style={styles.sectionTitle}>Comunidad IRAV</AppText>
+          </View>
+          {announcements.length > 0 && (
+            <Pressable onPress={() => nav.navigate('Announcements')}>
+              <AppText style={styles.seeAllText}>Ver todos</AppText>
+            </Pressable>
+          )}
         </View>
+
+        {loading ? (
+          <ActivityIndicator color={colors.purple} style={{ marginVertical: spacing.md }} />
+        ) : announcements.length === 0 ? (
+          <View style={styles.emptyAnnouncements}>
+            <Image
+              source={require('../../../assets/images/IRAV.png')}
+              style={styles.emptyLogo}
+              resizeMode="contain"
+            />
+            <AppText style={styles.emptyTitle}>Todo al día en la congregación</AppText>
+            <AppText muted style={styles.emptySub}>
+              Pronto compartiremos nuevos retiros, campamentos y encuentros juveniles.
+            </AppText>
+          </View>
+        ) : (
+          announcements.map((item) => (
+            <Pressable
+              key={item.id}
+              style={styles.announcementCard}
+              onPress={() => nav.navigate('AnnouncementDetail', { announcementId: item.id })}
+            >
+              {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={styles.announcementThumb} resizeMode="cover" />
+              ) : null}
+              <View style={styles.announcementBody}>
+                <AppText style={styles.announcementTitle} numberOfLines={2}>
+                  {item.title}
+                </AppText>
+                <AppText muted style={styles.announcementExcerpt} numberOfLines={2}>
+                  {item.body}
+                </AppText>
+                <View style={styles.announcementMeta}>
+                  <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                  <AppText muted style={styles.announcementDate}>
+                    {new Date(item.createdAt || '').toLocaleDateString('es-EC', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </AppText>
+                </View>
+              </View>
+            </Pressable>
+          ))
+        )}
+
+        <Spacer size="md" />
+
+        {/* BANNER DE SERVICIO PRESENCIAL / EN VIVO */}
+        <View style={styles.serviceBanner}>
+          <View style={styles.serviceLeft}>
+            <View style={styles.livePill}>
+              <View style={styles.livePulse} />
+              <AppText style={styles.livePillText}>Reunión General</AppText>
+            </View>
+            <AppText style={styles.serviceTitle}>Culto de Adoración</AppText>
+            <AppText muted style={styles.serviceTime}>
+              Domingos a las 10:00 AM y 17:00 PM
+            </AppText>
+          </View>
+          <View style={styles.churchBadgeWrap}>
+            <Image
+              source={require('../../../assets/images/IRAV.png')}
+              style={styles.churchBadgeLogo}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+
+        <Spacer size="xxl" />
       </ScrollView>
-    </ScreenShell>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.xxl },
-  top: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
   },
-  topText: { flex: 1, gap: 4 },
-  date: {
-    fontSize: 14,
-    textTransform: 'capitalize',
-    letterSpacing: 0,
+  scrollContent: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
   },
-  announceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.md,
+  heroCard: {
+    borderRadius: radius.xl,
     padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    overflow: 'hidden',
+    ...shadows.card,
   },
-  announceIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.accentSoft,
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroTextContent: {
+    flex: 1,
+    paddingRight: spacing.xs,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    marginBottom: spacing.xs,
+  },
+  heroBadgeLogo: {
+    width: 14,
+    height: 14,
+  },
+  heroBadgeText: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 11,
+    color: colors.gold,
+  },
+  heroTitle: {
+    fontFamily: fonts.serifBold,
+    fontSize: 17,
+    color: '#FFFFFF',
+    lineHeight: 22,
+  },
+  heroSub: {
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 4,
+    lineHeight: 17,
+  },
+  chatCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.gold,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    marginTop: spacing.sm,
+    ...shadows.subtle,
+  },
+  chatCtaText: {
+    fontFamily: fonts.sansBold,
+    fontSize: 13,
+    color: colors.purpleDark,
+  },
+  jesusHeroImage: {
+    width: 115,
+    height: 135,
+  },
+  quickGrid: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  quickCard: {
+    flex: 1,
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#EFEAE2',
+    ...shadows.subtle,
+  },
+  quickIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  quickTitle: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 12,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  quickSub: {
+    fontSize: 10,
+    marginTop: 1,
+    textAlign: 'center',
+  },
+  verseCard: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#EFEAE2',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.purple,
+    ...shadows.card,
+  },
+  verseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  verseIconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.purpleSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  announceBody: { flex: 1, gap: 2 },
-  announceHint: {
-    fontSize: 13,
-    textTransform: 'none',
-    letterSpacing: 0,
+  verseBadgeTitle: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 12,
+    color: colors.purple,
   },
-  card: {
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  verseText: {
+    fontFamily: fonts.serifSemi,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text,
+    fontStyle: 'italic',
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  meta: {
-    fontSize: 13,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  moodRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  moodDot: { alignItems: 'center', gap: 4 },
-  moodEmoji: { fontSize: 18 },
-  moodDay: {
-    fontSize: 11,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  label: {
-    fontSize: 13,
-    marginBottom: spacing.sm,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  phrase: { marginBottom: spacing.sm },
-  verse: { color: colors.text },
-  refRow: {
+  verseFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  ref: {
-    fontFamily: fonts.sansMedium,
-    fontSize: 14,
-    color: colors.accent,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  section: { marginBottom: spacing.sm },
-  sectionTitle: {
-    fontSize: 13,
-    marginBottom: spacing.sm,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  quickChip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.bgCard,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  quickText: {
-    fontFamily: fonts.sansMedium,
-    fontSize: 13,
-    color: colors.text,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  menu: {
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    overflow: 'hidden',
-    backgroundColor: colors.bgCard,
-  },
-  row: {
+  verseRefPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    gap: 4,
+    backgroundColor: colors.purpleSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
   },
-  rowIcon: {
+  verseRefText: {
+    fontFamily: fonts.sansBold,
+    fontSize: 11,
+    color: colors.purple,
+  },
+  verseActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  verseActionText: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 12,
+    color: colors.purple,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  sectionTitle: {
+    fontFamily: fonts.serifSemi,
+    fontSize: 16,
+    color: colors.text,
+  },
+  seeAllText: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 12,
+    color: colors.purple,
+  },
+  emptyAnnouncements: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyLogo: {
+    width: 48,
+    height: 48,
+    marginBottom: spacing.xs,
+    opacity: 0.85,
+  },
+  emptyTitle: {
+    fontFamily: fonts.serifSemi,
+    fontSize: 14,
+    color: colors.text,
+  },
+  emptySub: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
+    paddingHorizontal: spacing.md,
+  },
+  announcementCard: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    marginBottom: spacing.sm,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#EFEAE2',
+    ...shadows.card,
+  },
+  announcementThumb: {
+    width: '100%',
+    height: 120,
+  },
+  announcementBody: {
+    padding: spacing.md,
+  },
+  announcementTitle: {
+    fontFamily: fonts.serifSemi,
+    fontSize: 15,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  announcementExcerpt: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  announcementMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  announcementDate: {
+    fontSize: 11,
+  },
+  serviceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#EFEAE2',
+    ...shadows.card,
+  },
+  serviceLeft: {
+    flex: 1,
+    paddingRight: spacing.sm,
+  },
+  livePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.purpleSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  livePulse: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.purple,
+  },
+  livePillText: {
+    fontFamily: fonts.sansBold,
+    fontSize: 11,
+    color: colors.purple,
+  },
+  serviceTitle: {
+    fontFamily: fonts.serifSemi,
+    fontSize: 16,
+    color: colors.text,
+  },
+  serviceTime: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  churchBadgeWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.vellum,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  churchBadgeLogo: {
     width: 36,
     height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
+  },
+  moodPromptCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#EFEAE2',
+    ...shadows.subtle,
+  },
+  moodPromptLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  moodPromptIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFF9E6',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowBody: { flex: 1, gap: 2 },
-  rowHint: {
+  moodPromptTitle: {
+    fontFamily: fonts.sansBold,
     fontSize: 13,
-    textTransform: 'none',
-    letterSpacing: 0,
+    color: colors.text,
+  },
+  moodPromptSub: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  moodPromptBtn: {
+    backgroundColor: colors.purpleSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  moodPromptBtnText: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 12,
+    color: colors.purple,
   },
 });

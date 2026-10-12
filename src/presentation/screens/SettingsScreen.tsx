@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, View, TouchableOpacity } from 'react-native';
 import { ScreenShell } from '../templates/ScreenShell';
-import { AppHeader } from '../organisms/AppHeader';
+import { AppHeader } from '../components/AppHeader';
 import { CountrySelect } from '../molecules/CountrySelect';
 import { DatePickerField } from '../molecules/DatePickerField';
 import { FormField } from '../molecules/FormField';
@@ -19,12 +19,15 @@ import { syncChallengeReminders } from '../../infrastructure/adapters/challenges
 import { registerPushToken } from '../../infrastructure/adapters/push/registerPushToken';
 import { isValidBirthDate } from '../../shared/utils/dateFormat';
 import { refreshAuth } from '../../infrastructure/api/authRefresh';
-import { colors, fonts, spacing } from '../theme';
+import { getStoredUser, updateStoredUser } from '../../infrastructure/api/authStore';
+import { colors, fonts, spacing, radius, shadows, typography } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-/** Ajustes del usuario */
 export function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -34,11 +37,12 @@ export function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [voice, setVoice] = useState(true);
   const [hour, setHour] = useState(8);
+  const [highlightColor, setHighlightColor] = useState('#FFD700');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    void container.getProfile.execute().then((p) => {
+    void getStoredUser().then((p) => {
       if (!p) return;
       setProfile(p);
       setName(p.name);
@@ -49,6 +53,7 @@ export function SettingsScreen() {
       setNotifications(p.notificationsEnabled);
       setVoice(p.voiceEnabled);
       setHour(p.reminderHour);
+      if (p.highlightColor) setHighlightColor(p.highlightColor);
     }).catch(() => undefined);
   }, []);
 
@@ -71,6 +76,7 @@ export function SettingsScreen() {
       voiceEnabled: voice,
       reminderHour: hour,
       reminderMinute: profile.reminderMinute ?? 0,
+      highlightColor,
     };
     try {
       await container.saveProfile.execute(next);
@@ -87,9 +93,9 @@ export function SettingsScreen() {
           todayCompleted: challenge.todayCompleted,
           notificationsEnabled: next.notificationsEnabled,
         });
-      } catch {
-        /* reto opcional */
-      }
+      } catch {}
+      
+      await updateStoredUser(next);
       setProfile(next);
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
@@ -114,111 +120,310 @@ export function SettingsScreen() {
     ]);
   };
 
+  const initial = name ? name.charAt(0).toUpperCase() : '?';
+
   return (
-    <ScreenShell>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <AppHeader title="Ajustes" subtitle="Tu perfil y preferencias" />
-
-        <FormField label="Nombre" kind="name" value={name} onChangeText={setName} />
-        <Spacer size="sm" />
-
-        <DatePickerField label="Fecha de nacimiento" value={birthDate} onChange={setBirthDate} />
-        <Spacer size="sm" />
-
-        <FormField label="Teléfono" kind="phone" value={phone} onChangeText={setPhone} />
-        <Spacer size="sm" />
-
-        <AppText variant="caption">País</AppText>
-        <CountrySelect value={country} options={COUNTRIES} onChange={setCountry} />
-        <Spacer size="md" />
-
-        <AppText variant="caption">Versión de Biblia</AppText>
-        <View style={styles.wrap}>
-          {BIBLE_VERSIONS.filter((v) => v.language === 'Español').map((v) => (
-            <Chip
-              key={v.id}
-              label={v.shortName}
-              selected={versionId === v.id}
-              onPress={() => setVersionId(v.id)}
-              tone="sky"
-            />
-          ))}
-        </View>
-        <Spacer size="md" />
-
-        <View style={styles.row}>
-          <View style={styles.rowText}>
-            <AppText variant="subtitle">Notificaciones</AppText>
-            <AppText muted style={styles.hint}>
-              Un recordatorio al día
-            </AppText>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <AppHeader title="Mi Perfil" showLogo={false} transparent />
+      
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        
+        {/* Header Visual */}
+        <View style={styles.profileHeader}>
+          <View style={styles.avatar}>
+            <AppText style={styles.avatarText}>{initial}</AppText>
           </View>
-          <Switch
-            value={notifications}
-            onValueChange={setNotifications}
-            trackColor={{ true: colors.accentGlow, false: colors.border }}
-            thumbColor={notifications ? colors.accent : colors.textMuted}
-          />
+          <AppText style={styles.profileName}>{name || 'Cargando...'}</AppText>
+          <AppText style={styles.profileRole}>Miembro de la Comunidad</AppText>
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.rowText}>
-            <AppText variant="subtitle">Voz de Jesús</AppText>
-            <AppText muted style={styles.hint}>
-              Leer respuestas en voz alta
-            </AppText>
+        {/* Sección Personal */}
+        <View style={styles.section}>
+          <AppText variant="subtitle" style={styles.sectionTitle}>Información Personal</AppText>
+          <View style={styles.cardGroup}>
+            <View style={styles.fieldRow}>
+              <Ionicons name="person" size={20} color={colors.purple} style={styles.fieldIcon} />
+              <View style={styles.fieldInputWrapper}>
+                <FormField label="Nombre Completo" kind="name" value={name} onChangeText={setName} />
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.fieldRow}>
+              <Ionicons name="calendar" size={20} color={colors.purple} style={styles.fieldIcon} />
+              <View style={styles.fieldInputWrapper}>
+                <DatePickerField label="Fecha de nacimiento" value={birthDate} onChange={setBirthDate} />
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.fieldRow}>
+              <Ionicons name="call" size={20} color={colors.purple} style={styles.fieldIcon} />
+              <View style={styles.fieldInputWrapper}>
+                <FormField label="Teléfono" kind="phone" value={phone} onChangeText={setPhone} />
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.fieldRow}>
+              <Ionicons name="earth" size={20} color={colors.purple} style={styles.fieldIcon} />
+              <View style={styles.fieldInputWrapper}>
+                <AppText variant="caption" style={styles.label}>País</AppText>
+                <CountrySelect value={country} options={COUNTRIES} onChange={setCountry} />
+              </View>
+            </View>
           </View>
-          <Switch
-            value={voice}
-            onValueChange={setVoice}
-            trackColor={{ true: colors.accentGlow, false: colors.border }}
-            thumbColor={voice ? colors.accent : colors.textMuted}
-          />
         </View>
 
-        {notifications ? (
-          <>
-            <AppText variant="caption">Hora del recordatorio</AppText>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {HOURS.map((h) => (
-                <Chip
-                  key={h}
-                  label={`${String(h).padStart(2, '0')}:00`}
-                  selected={hour === h}
-                  onPress={() => setHour(h)}
-                  tone="mint"
-                />
-              ))}
-            </ScrollView>
-          </>
-        ) : null}
+        {/* Sección Preferencias */}
+        <View style={styles.section}>
+          <AppText variant="subtitle" style={styles.sectionTitle}>Preferencias de la App</AppText>
+          <View style={styles.cardGroup}>
+            
+            <View style={styles.settingRow}>
+              <View style={styles.settingTextGroup}>
+                <AppText style={styles.settingTitle}>Versión de la Biblia</AppText>
+                <AppText style={styles.settingSubtitle}>Selecciona tu versión favorita</AppText>
+              </View>
+            </View>
+            
+            <View style={styles.chipScrollWrapper}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                {BIBLE_VERSIONS.filter((v) => v.language === 'Español').map((v) => (
+                  <Chip
+                    key={v.id}
+                    label={v.shortName}
+                    selected={versionId === v.id}
+                    onPress={() => setVersionId(v.id)}
+                    tone="purple"
+                  />
+                ))}
+              </ScrollView>
+            </View>
 
-        <Spacer size="lg" />
-        <AppButton label={saved ? 'Guardado' : 'Guardar'} onPress={save} disabled={!valid || busy} />
+            <View style={styles.divider} />
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingTextGroup}>
+                <AppText style={styles.settingTitle}>Notificaciones Diarias</AppText>
+                <AppText style={styles.settingSubtitle}>Un mensaje de ánimo cada día</AppText>
+              </View>
+              <Switch
+                value={notifications}
+                onValueChange={setNotifications}
+                trackColor={{ true: colors.purpleLight, false: colors.border }}
+                thumbColor={notifications ? colors.purple : colors.textMuted}
+              />
+            </View>
+
+            {notifications && (
+              <View style={styles.subSettingRow}>
+                <AppText style={styles.settingSubtitle}>¿A qué hora prefieres recibirlo?</AppText>
+                <View style={styles.chipScrollWrapper}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                    {HOURS.map((h) => (
+                      <Chip
+                        key={h}
+                        label={`${String(h).padStart(2, '0')}:00`}
+                        selected={hour === h}
+                        onPress={() => setHour(h)}
+                        tone="gold"
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.divider} />
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingTextGroup}>
+                <AppText style={styles.settingTitle}>Voz de Jesús</AppText>
+                <AppText style={styles.settingSubtitle}>Habilitar lectura de mensajes en el chat</AppText>
+              </View>
+              <Switch
+                value={voice}
+                onValueChange={setVoice}
+                trackColor={{ true: colors.purpleLight, false: colors.border }}
+                thumbColor={voice ? colors.purple : colors.textMuted}
+              />
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingTextGroup}>
+                <AppText style={styles.settingTitle}>Color de Subrayado</AppText>
+                <AppText style={styles.settingSubtitle}>Personaliza el color para la Biblia</AppText>
+              </View>
+            </View>
+            <View style={styles.chipScrollWrapper}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                {['#FFD700', '#FF69B4', '#87CEFA', '#98FB98', '#FFB6C1', '#E6E6FA'].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    onPress={() => setHighlightColor(color)}
+                    style={[
+                      styles.colorCircle,
+                      { backgroundColor: color },
+                      highlightColor === color && styles.colorCircleSelected
+                    ]}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+
+          </View>
+        </View>
+
+        <Spacer size="xl" />
+        <AppButton 
+          label={saved ? '¡Guardado con éxito!' : 'Guardar Cambios'} 
+          onPress={save} 
+          disabled={!valid || busy} 
+          style={saved && {backgroundColor: colors.success}} 
+        />
         <Spacer size="md" />
-        <AppButton label="Cerrar sesión" onPress={logout} variant="ghost" />
+        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+          <AppText style={styles.logoutText}>Cerrar Sesión</AppText>
+        </TouchableOpacity>
         <Spacer size="xxl" />
+        
       </ScrollView>
-    </ScreenShell>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.xs },
-  row: {
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  scroll: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xxl,
+  },
+  profileHeader: {
+    alignItems: 'center',
+    marginVertical: spacing.lg,
+  },
+  avatar: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: colors.purple,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    ...shadows.card,
+  },
+  avatarText: {
+    fontSize: 40,
+    color: '#fff',
+    fontFamily: fonts.sansBold,
+  },
+  profileName: {
+    fontSize: 22,
+    fontFamily: fonts.sansBold,
+    color: colors.text,
+  },
+  profileRole: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  section: {
+    marginTop: spacing.xl,
+  },
+  sectionTitle: {
+    marginLeft: spacing.xs,
+    marginBottom: spacing.sm,
+    color: colors.textMuted,
+    fontSize: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  cardGroup: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.sm,
+    ...shadows.card,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  fieldIcon: {
+    marginRight: spacing.md,
+    opacity: 0.8,
+  },
+  fieldInputWrapper: {
+    flex: 1,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.bg,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.xs,
+  },
+  label: {
+    marginBottom: 4,
+    color: colors.textMuted,
+  },
+  settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
   },
-  rowText: { flex: 1, gap: 2 },
-  hint: {
-    fontFamily: fonts.sans,
-    fontSize: 14,
-    textTransform: 'none',
-    letterSpacing: 0,
+  settingTextGroup: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontFamily: fonts.sansSemi,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  settingSubtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  subSettingRow: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  chipScrollWrapper: {
+    marginTop: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  chipScroll: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  logoutText: {
+    color: colors.danger,
+    fontSize: 16,
+    fontFamily: fonts.sansSemi,
+  },
+  colorCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorCircleSelected: {
+    borderColor: colors.text,
   },
 });

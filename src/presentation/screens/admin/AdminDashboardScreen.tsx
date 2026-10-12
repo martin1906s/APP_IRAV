@@ -1,9 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ScreenShell } from '../../templates/ScreenShell';
-import { AppHeader } from '../../organisms/AppHeader';
+import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../atoms/AppText';
 import { Spacer } from '../../atoms/Spacer';
 import { MoodDistributionChart } from '../../components/admin/MoodDistributionChart';
@@ -11,9 +12,9 @@ import { ActivityChart } from '../../components/admin/ActivityChart';
 import { NewUsersChart } from '../../components/admin/NewUsersChart';
 import { container } from '../../../composition/container';
 import type { AdminAnalytics } from '../../../infrastructure/adapters/admin/ApiAdminAdapter';
-import { colors, radius, spacing } from '../../theme';
+import { colors, fonts, radius, spacing, shadows } from '../../theme';
 
-/** Panel principal del administrador con estadísticas y accesos */
+/** Panel principal del administrador con estadísticas litúrgicas y accesos premium */
 export function AdminDashboardScreen() {
   const nav = useNavigation<any>();
   const [name, setName] = useState('');
@@ -55,90 +56,129 @@ export function AdminDashboardScreen() {
     }, [load]),
   );
 
-  const firstName = name.trim().split(/\s+/)[0] || 'Admin';
+  const firstName = name.trim().split(/\s+/)[0] || 'Líder';
 
   return (
-    <ScreenShell>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <AppHeader title="Administración" subtitle={`Bienvenido, ${firstName}`} />
+    <ScreenShell padded={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <AppHeader
+          title="Administración"
+          subtitle={`Bienvenido, ${firstName}`}
+          onAvatarPress={() => nav.navigate('Profile')}
+        />
 
-        <View style={styles.statRow}>
-          <View style={styles.statCard}>
-            <AppText muted style={styles.statLabel}>Jóvenes</AppText>
-            <AppText style={styles.statValue}>{userCount}</AppText>
-          </View>
-          <View style={styles.statCard}>
-            <AppText muted style={styles.statLabel}>Ánimos</AppText>
-            <AppText style={styles.statValue}>{moodCount}</AppText>
-          </View>
-        </View>
-        <Spacer size="sm" />
-        <View style={styles.statRow}>
-          <View style={styles.statCard}>
-            <AppText muted style={styles.statLabel}>Chat</AppText>
-            <AppText style={styles.statValue}>{chatCount}</AppText>
-          </View>
-          <View style={styles.statCard}>
-            <AppText muted style={styles.statLabel}>Subrayados</AppText>
-            <AppText style={styles.statValue}>{highlightCount}</AppText>
-          </View>
-        </View>
-
-        <Spacer size="lg" />
-
-        {loading ? (
-          <ActivityIndicator color={colors.accent} style={styles.loader} />
-        ) : analytics ? (
-          <View style={styles.charts}>
-            <MoodDistributionChart data={analytics.moodsByType} />
-            <Spacer size="sm" />
-            <ActivityChart data={analytics.activityLast7Days} />
-            <Spacer size="sm" />
-            <NewUsersChart data={analytics.newUsersByMonth} />
-          </View>
-        ) : null}
-
-        <Spacer size="lg" />
-
-        <View style={styles.menu}>
-          <Pressable
-            style={styles.row}
-            onPress={() => nav.getParent()?.navigate('AdminUsersTab')}
+        <View style={styles.content}>
+          {/* BANNER HERO LITÚRGICO */}
+          <LinearGradient
+            colors={[colors.purpleDark, colors.purple, colors.purpleLight]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroBanner}
           >
-            <View style={styles.rowIcon}>
-              <Ionicons name="people-outline" size={20} color={colors.text} />
+            <View style={styles.heroHeader}>
+              <View style={styles.heroBadge}>
+                <Ionicons name="sparkles" size={13} color={colors.gold} />
+                <AppText style={styles.heroBadgeText}>Comunidad IRAV</AppText>
+              </View>
+              <AppText style={styles.heroDate}>
+                {new Date().toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </AppText>
             </View>
-            <View style={styles.rowBody}>
-              <AppText variant="subtitle">Jóvenes</AppText>
-              <AppText muted style={styles.rowHint}>Listado, perfiles y seguimiento pastoral</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
 
-          <Pressable
-            style={styles.row}
-            onPress={() => nav.getParent()?.navigate('AdminAnnouncementsTab')}
-          >
-            <View style={styles.rowIcon}>
-              <Ionicons name="megaphone-outline" size={20} color={colors.text} />
-            </View>
-            <View style={styles.rowBody}>
-              <AppText variant="subtitle">Anuncios</AppText>
-              <AppText muted style={styles.rowHint}>Crear, editar y notificar a los jóvenes</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
+            <AppText style={styles.heroTitle}>Cuidado Pastoral y Guía</AppText>
+            <AppText style={styles.heroSubtitle}>
+              Monitorea el crecimiento espiritual, ánimo y necesidades de tus jóvenes en tiempo real.
+            </AppText>
 
+            {/* METRICS ROW INSIDE HERO */}
+            <View style={styles.heroMetrics}>
+              <View style={styles.metricItem}>
+                <AppText style={styles.metricVal}>{userCount}</AppText>
+                <AppText style={styles.metricLbl}>Jóvenes</AppText>
+              </View>
+              <View style={styles.metricDivider} />
+              <View style={styles.metricItem}>
+                <AppText style={styles.metricVal}>{moodCount}</AppText>
+                <AppText style={styles.metricLbl}>Ánimos</AppText>
+              </View>
+              <View style={styles.metricDivider} />
+              <View style={styles.metricItem}>
+                <AppText style={styles.metricVal}>{chatCount}</AppText>
+                <AppText style={styles.metricLbl}>Mensajes</AppText>
+              </View>
+              <View style={styles.metricDivider} />
+              <View style={styles.metricItem}>
+                <AppText style={styles.metricVal}>{highlightCount}</AppText>
+                <AppText style={styles.metricLbl}>Subrayados</AppText>
+              </View>
+            </View>
+          </LinearGradient>
+
+          <Spacer size="md" />
+
+          {/* ACCESOS DIRECTOS DESTACADOS */}
+          <View style={styles.quickNavGrid}>
+            <Pressable
+              style={styles.quickNavCard}
+              onPress={() => nav.getParent()?.navigate('AdminUsersTab')}
+            >
+              <View style={[styles.quickNavIconWrap, { backgroundColor: colors.purpleSoft }]}>
+                <Ionicons name="people" size={20} color={colors.purple} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.quickNavTitle}>Jóvenes</AppText>
+                <AppText muted style={styles.quickNavSub}>Fichas y perfiles</AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
+
+            <Pressable
+              style={styles.quickNavCard}
+              onPress={() => nav.getParent()?.navigate('AdminAnnouncementsTab')}
+            >
+              <View style={[styles.quickNavIconWrap, { backgroundColor: '#FFF9E6' }]}>
+                <Ionicons name="megaphone" size={20} color={colors.goldDark} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.quickNavTitle}>Anuncios</AppText>
+                <AppText muted style={styles.quickNavSub}>Push notifications</AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
+          </View>
+
+          <Spacer size="sm" />
+
+          {/* CHARTS SECTION */}
+          {loading ? (
+            <ActivityIndicator color={colors.purple} style={styles.loader} />
+          ) : analytics ? (
+            <View style={styles.charts}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="analytics" size={18} color={colors.purple} />
+                <AppText style={styles.sectionTitle}>Métricas Comunitarias</AppText>
+              </View>
+              <MoodDistributionChart data={analytics.moodsByType} />
+              <Spacer size="sm" />
+              <ActivityChart data={analytics.activityLast7Days} />
+              <Spacer size="sm" />
+              <NewUsersChart data={analytics.newUsersByMonth} />
+            </View>
+          ) : null}
+
+          <Spacer size="lg" />
+
+          {/* MENÚ DE AJUSTES */}
           <Pressable
-            style={[styles.row, styles.rowLast]}
+            style={styles.settingsRow}
             onPress={() => nav.getParent()?.navigate('AdminSystemTab')}
           >
-            <View style={styles.rowIcon}>
-              <Ionicons name="settings-outline" size={20} color={colors.text} />
+            <View style={[styles.quickNavIconWrap, { backgroundColor: colors.vellumDark }]}>
+              <Ionicons name="settings" size={20} color={colors.text} />
             </View>
-            <View style={styles.rowBody}>
-              <AppText variant="subtitle">Ajustes del sistema</AppText>
-              <AppText muted style={styles.rowHint}>Retención, IA, recordatorios y más</AppText>
+            <View style={{ flex: 1 }}>
+              <AppText style={styles.quickNavTitle}>Ajustes del Sistema</AppText>
+              <AppText muted style={styles.quickNavSub}>Retención de chat, IA Gemini, horarios y más</AppText>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
@@ -149,59 +189,132 @@ export function AdminDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.xxl },
-  statRow: { flexDirection: 'row', gap: spacing.sm },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  scroll: { paddingBottom: spacing.xxl },
+  content: { paddingHorizontal: spacing.lg },
+  heroBanner: {
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadows.card,
   },
-  statLabel: {
-    fontSize: 13,
-    textTransform: 'none',
-    letterSpacing: 0,
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
   },
-  statValue: {
-    marginTop: spacing.xs,
-    fontSize: 28,
-    fontFamily: 'Outfit_600SemiBold',
-    color: colors.text,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  loader: { marginVertical: spacing.xl },
-  charts: { gap: 0 },
-  menu: {
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    overflow: 'hidden',
-    backgroundColor: colors.bgCard,
-  },
-  row: {
+  heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
   },
-  rowLast: { borderBottomWidth: 0 },
-  rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
+  heroBadgeText: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 11,
+    color: colors.gold,
+  },
+  heroDate: {
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.75)',
+    textTransform: 'capitalize',
+  },
+  heroTitle: {
+    fontFamily: fonts.serifBold,
+    fontSize: 20,
+    color: '#FFFFFF',
+    marginTop: 4,
+  },
+  heroSubtitle: {
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  heroMetrics: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  metricItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metricVal: {
+    fontFamily: fonts.sansBold,
+    fontSize: 18,
+    color: '#FFFFFF',
+  },
+  metricLbl: {
+    fontFamily: fonts.sans,
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 1,
+  },
+  metricDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  quickNavGrid: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  quickNavCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.card,
+  },
+  quickNavIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowBody: { flex: 1, gap: 2 },
-  rowHint: {
-    fontSize: 13,
-    textTransform: 'none',
-    letterSpacing: 0,
+  quickNavTitle: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 14,
+    color: colors.text,
+  },
+  quickNavSub: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  sectionTitle: {
+    fontFamily: fonts.serifSemi,
+    fontSize: 15,
+    color: colors.text,
+  },
+  loader: { marginVertical: spacing.xl },
+  charts: { gap: 0 },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.md,
+    ...shadows.card,
   },
 });

@@ -8,17 +8,18 @@ type Props = {
   value: string;
   options: string[];
   onChange: (value: string) => void;
+  variant?: 'boxed' | 'glass';
 };
 
 /** Desplegable de país */
-export function CountrySelect({ value, options, onChange }: Props) {
+export function CountrySelect({ value, options, onChange, variant = 'boxed' }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Pressable style={styles.trigger} onPress={() => setOpen(true)}>
-        <AppText variant="body">{value || 'Elige tu país'}</AppText>
-        <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+      <Pressable style={variant === 'glass' ? styles.triggerGlass : styles.trigger} onPress={() => setOpen(true)}>
+        <AppText variant="body" style={variant === 'glass' ? { color: '#ffffff' } : undefined}>{value || 'Elige tu país'}</AppText>
+        <Ionicons name="chevron-down" size={18} color={variant === 'glass' ? 'rgba(255, 255, 255, 0.7)' : colors.textMuted} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -66,10 +67,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgElevated,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 48,
+  },
+  triggerGlass: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     minHeight: 48,
@@ -81,7 +94,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   sheet: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgElevated,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,

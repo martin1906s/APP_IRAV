@@ -18,7 +18,7 @@ import { AppButton } from '../../atoms/AppButton';
 import { FormField } from '../../molecules/FormField';
 import { Spacer } from '../../atoms/Spacer';
 import { container } from '../../../composition/container';
-import { colors, fonts, radius, spacing } from '../../theme';
+import { colors, fonts, radius, spacing, shadows } from '../../theme';
 
 type RouteParams = { announcementId?: string };
 
@@ -26,15 +26,15 @@ function sentMessage(result: { recipientsCount?: number; targetedUsers?: number;
   const targeted = result.targetedDevices ?? result.targetedUsers ?? 0;
   const sent = result.recipientsCount ?? 0;
   return {
-    title: targeted === 0 ? 'Anuncio publicado' : 'Enviado',
+    title: targeted === 0 ? 'Anuncio publicado' : 'Notificación enviada',
     body:
       targeted === 0
-        ? 'El anuncio quedó publicado, pero ningún teléfono tiene notificaciones registradas. Cada usuario debe abrir la app instalada (APK, no Expo Go) e iniciar sesión.'
+        ? 'El anuncio quedó publicado. Los dispositivos recibirán alertas al iniciar sesión desde el APK oficial.'
         : `Se envió a ${sent} de ${targeted} dispositivo(s) registrados.`,
   };
 }
 
-/** Crear o editar anuncio con imagen opcional */
+/** Rediseño de formulario para crear/editar anuncios */
 export function AdminAnnouncementFormScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
@@ -79,25 +79,25 @@ export function AdminAnnouncementFormScreen() {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para adjuntar una imagen.');
+        Alert.alert('Permiso requerido', 'Necesitamos acceso a la galería para adjuntar la foto del anuncio.');
         return;
       }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-      base64: true,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        base64: true,
+      });
 
-    if (result.canceled || !result.assets[0]) return;
+      if (result.canceled || !result.assets[0]) return;
 
-    const asset = result.assets[0];
-    setImageUri(asset.uri);
-    setImageBase64(asset.base64 ?? null);
-    setImageMimeType(asset.mimeType ?? 'image/jpeg');
-    setRemoveImage(false);
+      const asset = result.assets[0];
+      setImageUri(asset.uri);
+      setImageBase64(asset.base64 ?? null);
+      setImageMimeType(asset.mimeType ?? 'image/jpeg');
+      setRemoveImage(false);
     } catch {
-      Alert.alert('Error', 'No se pudo abrir la galería.');
+      Alert.alert('Error', 'No se pudo abrir la galería de imágenes.');
     }
   };
 
@@ -115,9 +115,7 @@ export function AdminAnnouncementFormScreen() {
       const payload = {
         title: title.trim(),
         body: body.trim(),
-        ...(imageBase64 && imageMimeType
-          ? { imageBase64, imageMimeType }
-          : {}),
+        ...(imageBase64 && imageMimeType ? { imageBase64, imageMimeType } : {}),
         ...(removeImage ? { removeImage: true } : {}),
       };
 
@@ -146,7 +144,7 @@ export function AdminAnnouncementFormScreen() {
   if (loading) {
     return (
       <ScreenShell>
-        <AppHeader title="Anuncio" onBack={() => nav.goBack()} />
+        <AppHeader title="Cargando anuncio…" onBack={() => nav.goBack()} />
       </ScreenShell>
     );
   }
@@ -155,61 +153,73 @@ export function AdminAnnouncementFormScreen() {
     <ScreenShell>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <AppHeader
-          title={isEdit ? 'Editar anuncio' : 'Nuevo anuncio'}
-          subtitle="Título, mensaje e imagen opcional"
+          title={isEdit ? 'Editar Anuncio' : 'Nuevo Anuncio'}
+          subtitle="Redacta y Notifica a la Comunidad"
           onBack={() => nav.goBack()}
         />
 
-        <FormField label="Título" kind="text" value={title} onChangeText={setTitle} />
-        <Spacer size="sm" />
+        <View style={styles.card}>
+          <FormField
+            label="Título del comunicado"
+            kind="text"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Ej: Retiro Espiritual de Jóvenes"
+          />
 
-        <AppText variant="caption" style={styles.label}>
-          Mensaje
-        </AppText>
-        <AppInput
-          value={body}
-          onChangeText={setBody}
-          multiline
-          numberOfLines={6}
-          textAlignVertical="top"
-          style={styles.bodyInput}
-          placeholder="Escribe el comunicado para la comunidad…"
-        />
-        <Spacer size="md" />
+          <Spacer size="sm" />
+          <AppText variant="caption" style={styles.label}>
+            Mensaje de la notificación
+          </AppText>
+          <AppInput
+            value={body}
+            onChangeText={setBody}
+            multiline
+            numberOfLines={5}
+            textAlignVertical="top"
+            style={styles.bodyInput}
+            placeholder="Escribe el mensaje completo que recibirán los jóvenes en sus teléfonos…"
+          />
 
-        <AppText variant="caption" style={styles.label}>
-          Imagen (opcional)
-        </AppText>
-        {imageUri ? (
-          <View style={styles.imageWrap}>
-            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
-            <View style={styles.imageActions}>
-              <Pressable style={styles.imageBtn} onPress={pickImage}>
-                <Ionicons name="image-outline" size={18} color={colors.text} />
-                <AppText style={styles.imageBtnLabel}>Cambiar</AppText>
-              </Pressable>
-              <Pressable style={styles.imageBtn} onPress={clearImage}>
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                <AppText style={[styles.imageBtnLabel, { color: colors.danger }]}>Quitar</AppText>
-              </Pressable>
+          <Spacer size="md" />
+          <AppText variant="caption" style={styles.label}>
+            Imagen de cabecera (Bucket announcements)
+          </AppText>
+          {imageUri ? (
+            <View style={styles.imageWrap}>
+              <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+              <View style={styles.imageActions}>
+                <Pressable style={styles.imageBtn} onPress={pickImage}>
+                  <Ionicons name="image-outline" size={17} color={colors.text} />
+                  <AppText style={styles.imageBtnLabel}>Cambiar</AppText>
+                </Pressable>
+                <Pressable style={styles.imageBtn} onPress={clearImage}>
+                  <Ionicons name="trash-outline" size={17} color={colors.danger} />
+                  <AppText style={[styles.imageBtnLabel, { color: colors.danger }]}>Quitar</AppText>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        ) : (
-          <Pressable style={styles.pickImage} onPress={pickImage}>
-            <Ionicons name="image-outline" size={24} color={colors.accent} />
-            <AppText style={styles.pickLabel}>Seleccionar imagen</AppText>
-          </Pressable>
-        )}
+          ) : (
+            <Pressable style={styles.pickImage} onPress={pickImage}>
+              <View style={styles.pickIconWrap}>
+                <Ionicons name="cloud-upload-outline" size={26} color={colors.purple} />
+              </View>
+              <AppText style={styles.pickTitle}>Subir imagen</AppText>
+              <AppText muted style={styles.pickHint}>JPG, PNG (máx. 5MB) para la notificación</AppText>
+            </Pressable>
+          )}
+        </View>
 
         <Spacer size="lg" />
         <AppButton
-          label={busy ? 'Guardando…' : 'Guardar borrador'}
+          label={busy ? 'Guardando…' : 'Guardar como borrador'}
+          variant="outline"
           onPress={() => save(false)}
           disabled={!valid || busy}
         />
         <Spacer size="sm" />
         <AppButton
-          label={busy ? 'Enviando…' : 'Publicar y notificar'}
+          label={busy ? 'Enviando…' : 'Publicar y Enviar Notificación Push'}
           onPress={() => save(true)}
           disabled={!valid || busy}
         />
@@ -221,28 +231,47 @@ export function AdminAnnouncementFormScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
-  label: { color: colors.textMuted, marginBottom: spacing.xs },
-  bodyInput: { minHeight: 140, paddingTop: spacing.md },
-  pickImage: {
+  card: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#EFEAE2',
+    ...shadows.card,
+  },
+  label: { color: colors.textMuted, marginBottom: 4 },
+  bodyInput: { minHeight: 120, paddingTop: spacing.md },
+  pickImage: {
+    borderWidth: 1.5,
+    borderColor: colors.purpleSoft,
     borderStyle: 'dashed',
     borderRadius: radius.md,
     padding: spacing.lg,
     alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.bgCard,
+    gap: 4,
+    backgroundColor: colors.vellum,
   },
-  pickLabel: {
-    fontFamily: fonts.sansMedium,
-    color: colors.accent,
-    textTransform: 'none',
-    letterSpacing: 0,
+  pickIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.purpleSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  pickTitle: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 14,
+    color: colors.purple,
+  },
+  pickHint: {
+    fontSize: 12,
   },
   imageWrap: {
     borderRadius: radius.md,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: colors.border,
   },
   image: { width: '100%', height: 180 },
@@ -250,14 +279,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgElevated,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   imageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   imageBtnLabel: {
     fontFamily: fonts.sansMedium,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text,
-    textTransform: 'none',
-    letterSpacing: 0,
   },
 });

@@ -15,6 +15,7 @@ export type UserProfile = {
   voiceEnabled: boolean;
   reminderHour: number;
   reminderMinute: number;
+  highlightColor?: string;
 };
 
 export const DEFAULT_PROFILE: Omit<
@@ -26,6 +27,7 @@ export const DEFAULT_PROFILE: Omit<
   voiceEnabled: true,
   reminderHour: 8,
   reminderMinute: 0,
+  highlightColor: '#FFD700',
 };
 
 export function preferredVersionByBirthDate(birthDate: string): string {

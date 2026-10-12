@@ -74,7 +74,10 @@ export class ExpoSpeechAdapter implements SpeechPort {
         return;
       }
 
-      Speech.speak(trimmed, {
+      // Evitamos que el TTS lea "4:19" como "4 horas y 19 minutos"
+      const speakableText = trimmed.replace(/(\d+):(\d+)/g, '$1 versículo $2');
+
+      Speech.speak(speakableText, {
         language: voice?.language ?? 'es-ES',
         voice: voice?.identifier,
         rate: 1,

@@ -98,7 +98,7 @@ export function NewUsersChart({ data }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgElevated,
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,

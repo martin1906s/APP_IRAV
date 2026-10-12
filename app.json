@@ -74,41 +74,9 @@
           "photosPermission": "IRAV necesita acceso a tus fotos para adjuntar imágenes en anuncios."
         }
       ],
-      [
-        "react-native-android-widget",
-        {
-          "widgets": [
-            {
-              "name": "VerseWidget",
-              "label": "Versículo IRAV",
-              "description": "Frase y versículo según cómo te sientes hoy.",
-              "minWidth": "110dp",
-              "minHeight": "80dp",
-              "maxResizeWidth": "530dp",
-              "maxResizeHeight": "400dp",
-              "targetCellWidth": 4,
-              "targetCellHeight": 2,
-              "updatePeriodMillis": 1800000,
-              "resizeMode": "horizontal|vertical"
-            },
-            {
-              "name": "ChatWidget",
-              "label": "Chat con Jesús",
-              "description": "Abre el chat de IRAV para hablar con Jesús.",
-              "minWidth": "80dp",
-              "minHeight": "80dp",
-              "maxResizeWidth": "400dp",
-              "maxResizeHeight": "400dp",
-              "targetCellWidth": 2,
-              "targetCellHeight": 2,
-              "updatePeriodMillis": 86400000,
-              "resizeMode": "horizontal|vertical"
-            }
-          ]
-        }
-      ],
-      "@react-native-community/datetimepicker",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-video",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {

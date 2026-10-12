@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ScreenShell } from '../../templates/ScreenShell';
 import { AppHeader } from '../../organisms/AppHeader';
@@ -14,11 +15,11 @@ import { COUNTRIES } from '../../../shared/constants/countries';
 import { isValidBirthDate } from '../../../shared/utils/dateFormat';
 import { container } from '../../../composition/container';
 import type { DocumentType, UserRole } from '../../../domain/entities/UserProfile';
-import { colors, spacing } from '../../theme';
+import { colors, fonts, radius, spacing, shadows } from '../../theme';
 
 type RouteParams = { userId?: string };
 
-/** Crear o editar joven desde el panel admin */
+/** Crear o editar joven desde el panel admin con interfaz pulida */
 export function AdminUserFormScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
@@ -50,7 +51,7 @@ export function AdminUserFormScreen() {
       setCountry(user.country);
       setRole(user.role ?? 'USER');
     } catch {
-      setError('No se pudo cargar el joven. Intenta de nuevo.');
+      setError('No se pudo cargar el perfil del joven.');
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,7 @@ export function AdminUserFormScreen() {
 
   const remove = () => {
     if (!userId) return;
-    Alert.alert('Eliminar joven', '¿Seguro? Se borrarán sus datos asociados.', [
+    Alert.alert('Eliminar miembro', '¿Deseas eliminar permanentemente este usuario y todos sus datos asociados?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -136,78 +137,94 @@ export function AdminUserFormScreen() {
   if (loading) {
     return (
       <ScreenShell>
-        <AppHeader title="Cargando…" onBack={() => nav.goBack()} />
+        <AppHeader title="Cargando perfil…" onBack={() => nav.goBack()} />
       </ScreenShell>
     );
   }
 
   return (
     <ScreenShell>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <AppHeader
-          title={isEdit ? 'Editar joven' : 'Nuevo joven'}
-          subtitle={isEdit ? 'Actualiza los datos del perfil' : 'Registra un nuevo miembro'}
+          title={isEdit ? 'Editar Perfil' : 'Nuevo Miembro'}
+          subtitle={isEdit ? 'Actualiza los datos del joven' : 'Registra un joven en la comunidad'}
           onBack={() => nav.goBack()}
         />
 
-        <AppText variant="caption" style={styles.label}>
-          Tipo de documento
-        </AppText>
-        <View style={styles.chips}>
-          <Chip
-            label="Cédula"
-            selected={documentType === 'CEDULA'}
-            onPress={() => setDocumentType('CEDULA')}
-            tone="gold"
+        <View style={styles.card}>
+          <AppText variant="caption" style={styles.sectionTitle}>
+            Documento de Identidad
+          </AppText>
+          <View style={styles.chips}>
+            <Chip
+              label="Cédula"
+              selected={documentType === 'CEDULA'}
+              onPress={() => setDocumentType('CEDULA')}
+              tone="gold"
+            />
+            <Chip
+              label="Pasaporte"
+              selected={documentType === 'PASSPORT'}
+              onPress={() => setDocumentType('PASSPORT')}
+              tone="mint"
+            />
+          </View>
+          <Spacer size="xs" />
+          <FormField
+            label="Número de documento"
+            kind="identityDocument"
+            keyboardType={documentType === 'CEDULA' ? 'number-pad' : 'default'}
+            value={documentId}
+            onChangeText={setDocumentId}
+            editable={!busy}
           />
-          <Chip
-            label="Pasaporte"
-            selected={documentType === 'PASSPORT'}
-            onPress={() => setDocumentType('PASSPORT')}
-            tone="mint"
+
+          <Spacer size="sm" />
+          <AppText variant="caption" style={styles.sectionTitle}>
+            Datos Personales
+          </AppText>
+          <FormField label="Nombre completo" kind="name" value={name} onChangeText={setName} />
+          <DatePickerField label="Fecha de nacimiento" value={birthDate} onChange={setBirthDate} />
+          <FormField label="Teléfono de contacto" kind="phone" value={phone} onChangeText={setPhone} />
+          
+          <Spacer size="xs" />
+          <AppText variant="caption" style={styles.fieldLabel}>País de residencia</AppText>
+          <CountrySelect value={country} options={COUNTRIES} onChange={setCountry} />
+
+          <Spacer size="sm" />
+          <AppText variant="caption" style={styles.sectionTitle}>
+            Seguridad y Rol
+          </AppText>
+          <FormField
+            label={isEdit ? 'Nueva contraseña (opcional)' : 'Contraseña de acceso'}
+            kind="password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder={isEdit ? 'Dejar en blanco para conservar la actual' : 'Mínimo 6 caracteres'}
           />
-        </View>
-        <Spacer size="sm" />
 
-        <FormField
-          label="Documento"
-          kind="identityDocument"
-          keyboardType={documentType === 'CEDULA' ? 'number-pad' : 'default'}
-          value={documentId}
-          onChangeText={setDocumentId}
-          editable={!busy}
-        />
-        <FormField
-          label={isEdit ? 'Restablecer contraseña (opcional)' : 'Contraseña'}
-          kind="password"
-          value={password}
-          onChangeText={setPassword}
-          placeholder={isEdit ? 'Solo si deseas cambiarla' : 'Mín. 6 caracteres'}
-        />
-        <FormField label="Nombre" kind="name" value={name} onChangeText={setName} />
-        <DatePickerField label="Nacimiento" value={birthDate} onChange={setBirthDate} />
-        <FormField label="Teléfono" kind="phone" value={phone} onChangeText={setPhone} />
-        <AppText variant="caption" style={styles.label}>
-          País
-        </AppText>
-        <CountrySelect value={country} options={COUNTRIES} onChange={setCountry} />
-        <Spacer size="md" />
-
-        <AppText variant="caption" style={styles.label}>
-          Rol
-        </AppText>
-        <View style={styles.chips}>
-          <Chip label="Joven" selected={role === 'USER'} onPress={() => setRole('USER')} tone="sky" />
-          <Chip label="Admin" selected={role === 'ADMIN'} onPress={() => setRole('ADMIN')} tone="gold" />
+          <AppText variant="caption" style={styles.fieldLabel}>Rol asignado</AppText>
+          <View style={styles.chips}>
+            <Chip label="Joven" selected={role === 'USER'} onPress={() => setRole('USER')} tone="sky" />
+            <Chip label="Administrador" selected={role === 'ADMIN'} onPress={() => setRole('ADMIN')} tone="gold" />
+          </View>
         </View>
 
-        {error ? <AppText style={styles.error}>{error}</AppText> : null}
+        {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
+
         <Spacer size="lg" />
-        <AppButton label={isEdit ? 'Guardar cambios' : 'Crear joven'} onPress={save} disabled={!valid || busy} />
+        <AppButton
+          label={busy ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Registrar joven'}
+          onPress={save}
+          disabled={!valid || busy}
+        />
         {isEdit ? (
           <>
-            <Spacer size="md" />
-            <AppButton label="Eliminar joven" onPress={remove} variant="ghost" disabled={busy} />
+            <Spacer size="sm" />
+            <Pressable style={styles.deleteBtn} onPress={remove} disabled={busy}>
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
+              <AppText style={styles.deleteText}>Eliminar miembro de la comunidad</AppText>
+            </Pressable>
           </>
         ) : null}
         <Spacer size="xxl" />
@@ -217,12 +234,47 @@ export function AdminUserFormScreen() {
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.textMuted, marginBottom: spacing.xs },
-  chips: { flexDirection: 'row', flexWrap: 'wrap' },
-  error: {
+  content: { paddingBottom: spacing.xxl },
+  card: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#EFEAE2',
+    gap: spacing.xs,
+    ...shadows.card,
+  },
+  sectionTitle: {
+    color: colors.purple,
+    fontFamily: fonts.sansBold,
+    marginTop: spacing.xs,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  fieldLabel: {
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.xs },
+  errorText: {
     marginTop: spacing.sm,
     color: colors.danger,
-    textTransform: 'none',
-    letterSpacing: 0,
+    fontFamily: fonts.sansMedium,
+    textAlign: 'center',
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(220, 76, 94, 0.08)',
+  },
+  deleteText: {
+    fontFamily: fonts.sansSemi,
+    fontSize: 14,
+    color: colors.danger,
   },
 });

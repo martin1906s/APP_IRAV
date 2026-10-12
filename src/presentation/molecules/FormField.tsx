@@ -20,6 +20,7 @@ type FieldKind =
 type Props = Omit<TextInputProps, 'secureTextEntry' | 'autoCapitalize'> & {
   label: string;
   kind?: FieldKind;
+  variant?: 'boxed' | 'underline' | 'glass';
 };
 
 const FIELD_CONFIG: Record<
@@ -98,17 +99,18 @@ const FIELD_CONFIG: Record<
 };
 
 /** Campo de formulario con etiqueta y teclado adecuado */
-export function FormField({ label, kind = 'text', ...inputProps }: Props) {
+export function FormField({ label, kind = 'text', variant = 'boxed', ...inputProps }: Props) {
   const config = FIELD_CONFIG[kind];
 
   return (
     <View style={styles.wrap}>
-      <AppText variant="caption" style={styles.label}>
+      <AppText variant="caption" style={[styles.label, variant === 'glass' && { color: 'rgba(255, 255, 255, 0.7)' }]}>
         {label}
       </AppText>
       <AppInput
         {...config}
         {...inputProps}
+        variant={variant}
         keyboardType={inputProps.keyboardType ?? config.keyboardType}
       />
     </View>
